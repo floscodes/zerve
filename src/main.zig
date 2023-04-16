@@ -1,5 +1,5 @@
 const std = @import("std");
-const testing = std.testing;
+const status = @import("status.zig");
 
 const allocator = std.heap.page_allocator;
 
@@ -28,7 +28,7 @@ pub fn main() !void {
         defer buffer.deinit();
 
         var chunk_buf: [4096]u8 = undefined;
-        // Collect max 4096 byte of data from the stream into the chunk_buf. Then add it
+        // Collect max 4096 bytes of data from the stream into the chunk_buf. Then add it
         // to the ArrayList. Repeat this until request stream ends by counting the appearence
         // of "\r\n"
         while (true) {
