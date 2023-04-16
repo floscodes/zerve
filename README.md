@@ -1,2 +1,2 @@
-# zeam
-zeam is a small web server framework in zig.
+# zerve
+zerve is a small web server framework in zig.
