@@ -1,6 +1,4 @@
 const std = @import("std");
-const status = @import("status.zig");
-
 const allocator = std.heap.page_allocator;
 
 pub fn main() !void {

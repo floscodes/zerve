@@ -1,3 +1,4 @@
+/// Representing the HTTP status
 pub const Status = enum(u32) {
     // INFORMATION RESPONSES
 
@@ -18,7 +19,7 @@ pub const Status = enum(u32) {
     ALREADY_REPORTED = 208,
     IM_USED = 226,
 
-    //REDIRECTION MESSAGES
+    // REDIRECTION MESSAGES
     MULTIPLE_CHOICES = 300,
     MOVED_PERMANENTLY = 301,
     FOUND = 302,
@@ -60,7 +61,7 @@ pub const Status = enum(u32) {
     REQUESTS_HEADER_FIELDS_TOO_LARGE = 431,
     UNAVAILABLE_FOR_LEGAL_REASONS = 451,
 
-    //SERVER RESPONSES
+    // SERVER RESPONSES
     INTERNAL_SERVER_ERROR = 500,
     NOT_IMPLEMETED = 501,
     BAD_GATEWAY = 502,
@@ -73,6 +74,8 @@ pub const Status = enum(u32) {
     NOT_EXTENDED = 510,
     NETWORK_AUTHENTICATION_REQUIRED = 511,
 
+    /// Returns a stringified version of a HTTP status.
+    /// E.g. `Status.OK.stringify()`  will be "200 OK".
     pub fn stringify(self: Status) []const u8 {
         switch (self) {
             Status.CONTINUE => return "100 Continue",
@@ -139,5 +142,12 @@ pub const Status = enum(u32) {
             Status.NOT_EXTENDED => return "510 Not Extended",
             Status.NETWORK_AUTHENTICATION_REQUIRED => return "511 Network Authentication Required",
         }
+    }
+
+    /// Parses a given u32 code and returns the corresponding `Status`.
+    /// E.g. `Status.code(200)` will return `Status.OK`.
+    /// The program will panic if the passed code does not exist.
+    pub fn code(n: u32) Status {
+        return @intToEnum(Status, n);
     }
 };
