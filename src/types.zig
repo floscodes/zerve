@@ -14,6 +14,21 @@ pub const Route = tuple(&.{ []const u8, *const fn (Request) Response });
 pub const Header = struct {
     key: []const u8,
     value: []const u8,
+
+    pub fn stringify(header: Header) []const u8 {
+        var string = std.ArrayList(u8).init(allocator);
+        string.appendSlice(header.key) catch unreachable;
+        string.appendSlice(": ") catch unreachable;
+        string.appendSlice(header.value) catch unreachable;
+        const out = string.toOwnedSlice() catch "";
+        return out;
+    }
+
+    test "stringify Header" {
+        var header = Header{ .key = "User-Agent", .value = "Testbot" };
+        const compare = "User-Agent: Testbot";
+        try std.testing.expect(std.mem.eql(u8, header.stringify(), compare[0..]));
+    }
 };
 
 /// The HTTP Version.
@@ -89,47 +104,53 @@ pub const Request = struct {
     body: []const u8,
 
     pub fn build(bytes: []const u8) !Request {
-        var lines = std.mem.split(u8, bytes, "\n");
         var req: Request = undefined;
+        var parts = std.mem.split(u8, bytes, "\r\n");
+        const header = parts.first();
+        var header_lines = std.mem.split(u8, header, "\n");
         var header_buffer = std.ArrayList(Header).init(allocator);
 
-        var items = std.mem.split(u8, lines.first(), " ");
-        req.method = Method.parse(items.first());
-        req.uri = if (items.next()) |value| value else "";
+        var header_items = std.mem.split(u8, header_lines.first(), " ");
+        req.method = Method.parse(header_items.first());
+        req.uri = if (header_items.next()) |value| value else "";
 
-        if (items.next()) |value| {
+        if (header_items.next()) |value| {
             req.httpVersion = HTTP_Version.parse(value);
         } else {
             req.httpVersion = HTTP_Version.HTTP1_1;
         }
 
-        while (lines.next()) |line| {
+        while (header_lines.next()) |line| {
             var headers = std.mem.split(u8, line, ": ");
             const item1 = headers.first();
             const item2 = if (headers.next()) |value| value else unreachable;
-            const header = Header{ .key = item1, .value = item2 };
-            try header_buffer.append(header);
+            const header_pair = Header{ .key = item1, .value = item2 };
+            try header_buffer.append(header_pair);
         }
         req.headers = header_buffer.toOwnedSlice() catch &[_]Header{Header{ .key = "", .value = "" }};
+        req.body = if (parts.next()) |value| value else "";
         return req;
     }
-};
 
-test "function to build a Request" {
-    const bytes = "GET /test HTTP/1.1\nHost: localhost:8080\nUser-Agent: Testbot";
-    const req = try Request.build(bytes);
-    try std.testing.expect(req.method == Method.GET);
-    try std.testing.expect(req.httpVersion == HTTP_Version.HTTP1_1);
-    try std.testing.expect(std.mem.eql(u8, req.uri, "/test"));
-    try std.testing.expect(std.mem.eql(u8, req.headers[1].key, "User-Agent"));
-    try std.testing.expect(std.mem.eql(u8, req.headers[1].value, "Testbot"));
-    try std.testing.expect(std.mem.eql(u8, req.headers[0].key, "Host"));
-    try std.testing.expect(std.mem.eql(u8, req.headers[0].value, "localhost:8080"));
-}
+    // Test the Request build function
+    test "build a Request" {
+        const bytes = "GET /test HTTP/1.1\nHost: localhost:8080\nUser-Agent: Testbot\r\nThis is the test body!";
+        const req = try Request.build(bytes);
+        try std.testing.expect(req.method == Method.GET);
+        try std.testing.expect(req.httpVersion == HTTP_Version.HTTP1_1);
+        try std.testing.expect(std.mem.eql(u8, req.uri, "/test"));
+        try std.testing.expect(std.mem.eql(u8, req.headers[1].key, "User-Agent"));
+        try std.testing.expect(std.mem.eql(u8, req.headers[1].value, "Testbot"));
+        try std.testing.expect(std.mem.eql(u8, req.headers[0].key, "Host"));
+        try std.testing.expect(std.mem.eql(u8, req.headers[0].value, "localhost:8080"));
+        try std.testing.expect(std.mem.eql(u8, req.body, "This is the test body!"));
+    }
+};
 
 /// Represents a standard http-Response sent by the webapp (server).
 /// It is the return type of every handling function.
 pub const Response = struct {
+    httpVersion: HTTP_Version = HTTP_Version.HTTP1_1,
     /// Response status, default is "200 OK"
     status: stat.Status = stat.Status.OK,
     /// Response eaders sent by the server
@@ -156,4 +177,34 @@ pub const Response = struct {
     pub fn forbidden(s: []u8) Response {
         return Response{ .status = stat.Status.FORBIDDEN, .body = s };
     }
+
+    pub fn stringify(r: Response) ![]const u8 {
+        var res = std.ArrayList(u8).init(allocator);
+        try res.appendSlice(r.httpVersion.stringify());
+        try res.append(' ');
+        try res.appendSlice(r.status.stringify());
+        try res.appendSlice("\r\n");
+
+        for (r.headers) |header| {
+            try res.appendSlice(header.stringify());
+            try res.appendSlice("\n");
+        }
+        try res.appendSlice("\r\n\r\n");
+        try res.appendSlice(r.body);
+
+        return try res.toOwnedSlice();
+    }
+
+    test "stringify Response" {
+        const eql = std.mem.eql;
+        const headers = [_]Header{.{ .key = "User-Agent", .value = "Testbot" }};
+        const res = Response{ .headers = &headers, .body = "This is the body!" };
+
+        try std.testing.expect(eql(u8, try res.stringify(), "HTTP/1.1 200 OK\r\nUser-Agent: Testbot\n\r\n\r\nThis is the body!"));
+    }
 };
+
+// Run all tests, even the nested ones
+test {
+    std.testing.refAllDecls(@This());
+}

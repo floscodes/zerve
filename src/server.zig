@@ -44,8 +44,6 @@ pub const Server = struct {
             const req_stream = try buffer.toOwnedSlice();
             const req = try Request.build(req_stream);
 
-            std.debug.print("Request sent by client:\n{s}", .{buffer.items});
-
             for (rt) |r| {
                 if (eql(u8, r[0], req.uri)) {
                     _ = r[1](req);
@@ -54,7 +52,7 @@ pub const Server = struct {
             }
 
             _ = try conn.stream.write("HTTP/1.1 200 OK\r\n");
-            _ = try conn.stream.write("Content-Type: text/html\r\n\r\n");
+            _ = try conn.stream.write("Content-Type: text/html\nUser-Agent: Testbot\r\n\r\n");
             _ = try conn.stream.write("<h1>It works!</h1>");
         }
     }
