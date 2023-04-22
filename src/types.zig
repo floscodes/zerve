@@ -17,10 +17,63 @@ pub const Header = struct {
 };
 
 /// The HTTP Version.
-pub const HTTP_Version = enum { HTTP1_1, HTTP2 };
+pub const HTTP_Version = enum {
+    HTTP1_1,
+    HTTP2,
+
+    pub fn parse(s: []const u8) HTTP_Version {
+        if (std.mem.containsAtLeast(u8, s, 1, "2")) return HTTP_Version.HTTP2 else return HTTP_Version.HTTP1_1;
+    }
+    pub fn stringify(version: HTTP_Version) []const u8 {
+        switch (version) {
+            HTTP_Version.HTTP1_1 => return "HTTP/1.1",
+            HTTP_Version.HTTP2 => return "HTTP/2.0",
+        }
+    }
+};
 
 /// Represents the Method of a request or a response.
-pub const Method = enum { GET, POST, PUT, HEAD, DELETE, CONNECT, OPTIONS, TRACE, PATCH };
+pub const Method = enum {
+    GET,
+    POST,
+    PUT,
+    HEAD,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE,
+    PATCH,
+    UNKNOWN,
+
+    fn parse(value: []const u8) Method {
+        if (std.mem.containsAtLeast(u8, value, 1, "GET")) return Method.GET;
+        if (std.mem.containsAtLeast(u8, value, 1, "POST")) return Method.POST;
+        if (std.mem.containsAtLeast(u8, value, 1, "PUT")) return Method.PUT;
+        if (std.mem.containsAtLeast(u8, value, 1, "HEAD")) return Method.HEAD;
+        if (std.mem.containsAtLeast(u8, value, 1, "DELETE")) return Method.DELETE;
+        if (std.mem.containsAtLeast(u8, value, 1, "CONNECT")) return Method.CONNECT;
+        if (std.mem.containsAtLeast(u8, value, 1, "OPTIONS")) return Method.OPTIONS;
+        if (std.mem.containsAtLeast(u8, value, 1, "TRACE")) return Method.TRACE;
+        if (std.mem.containsAtLeast(u8, value, 1, "PATCH")) return Method.PATCH;
+        return Method.UNKNOWN;
+    }
+
+    /// Turns the HTTP_method into a u8-Slice.
+    pub fn stringify(m: Method) []const u8 {
+        switch (m) {
+            Method.GET => return "GET",
+            Method.POST => return "POST",
+            Method.PUT => return "PUT",
+            Method.PATCH => return "PATCH",
+            Method.DELETE => return "DELETE",
+            Method.HEAD => return "HEAD",
+            Method.CONNECT => return "CONNECT",
+            Method.OPTIONS => return "OPTIONS",
+            Method.TRACE => return "TRACE",
+            Method.UNKNOWN => return "UNKNOWN",
+        }
+    }
+};
 
 /// Represents a standard http-Request sent by the client.
 pub const Request = struct {
@@ -29,31 +82,50 @@ pub const Request = struct {
     /// HTTP-Version of the Request sent by the client
     httpVersion: HTTP_Version,
     /// Represents the request headers sent by the client
-    headers: []Header,
+    headers: []const Header,
+    /// Teh Request URI
+    uri: []const u8,
     /// Represents the request body sent by the client
-    body: []u8,
+    body: []const u8,
 
-    fn build(bytes: []u8) Request {
-        const lines = std.mem.split(u8, bytes, "\n");
+    pub fn build(bytes: []const u8) !Request {
+        var lines = std.mem.split(u8, bytes, "\n");
         var req: Request = undefined;
         var header_buffer = std.ArrayList(Header).init(allocator);
-        defer header_buffer.deinit();
 
-        for (lines, 0..) |line, index| {
-            if (index == 0) {
-                const items = std.mem.split(u8, line, " ");
-                req.method = items[0];
-                req.uri = items[1];
-                continue;
-            }
-            var item = std.mem.split(u8, line, ":");
-            const header = Header{ .key = std.mem.trim(u8, item[0], " "), .value = std.mem.trim(u8, item[1], " ") };
+        var items = std.mem.split(u8, lines.first(), " ");
+        req.method = Method.parse(items.first());
+        req.uri = if (items.next()) |value| value else "";
+
+        if (items.next()) |value| {
+            req.httpVersion = HTTP_Version.parse(value);
+        } else {
+            req.httpVersion = HTTP_Version.HTTP1_1;
+        }
+
+        while (lines.next()) |line| {
+            var headers = std.mem.split(u8, line, ": ");
+            const item1 = headers.first();
+            const item2 = if (headers.next()) |value| value else unreachable;
+            const header = Header{ .key = item1, .value = item2 };
             try header_buffer.append(header);
         }
-        req.headers = header_buffer.items;
+        req.headers = header_buffer.toOwnedSlice() catch &[_]Header{Header{ .key = "", .value = "" }};
         return req;
     }
 };
+
+test "function to build a Request" {
+    const bytes = "GET /test HTTP/1.1\nHost: localhost:8080\nUser-Agent: Testbot";
+    const req = try Request.build(bytes);
+    try std.testing.expect(req.method == Method.GET);
+    try std.testing.expect(req.httpVersion == HTTP_Version.HTTP1_1);
+    try std.testing.expect(std.mem.eql(u8, req.uri, "/test"));
+    try std.testing.expect(std.mem.eql(u8, req.headers[1].key, "User-Agent"));
+    try std.testing.expect(std.mem.eql(u8, req.headers[1].value, "Testbot"));
+    try std.testing.expect(std.mem.eql(u8, req.headers[0].key, "Host"));
+    try std.testing.expect(std.mem.eql(u8, req.headers[0].value, "localhost:8080"));
+}
 
 /// Represents a standard http-Response sent by the webapp (server).
 /// It is the return type of every handling function.
@@ -83,52 +155,5 @@ pub const Response = struct {
     /// Send a response with status forbidden.
     pub fn forbidden(s: []u8) Response {
         return Response{ .status = stat.Status.FORBIDDEN, .body = s };
-    }
-};
-
-pub const Server = struct {
-    pub fn listen(ip: []const u8, port: u16, rt: []const Route) !void {
-        _ = rt;
-
-        // Init server
-        const server_options: std.net.StreamServer.Options = .{};
-        var server = std.net.StreamServer.init(server_options);
-        defer server.deinit();
-        const addr = try std.net.Address.parseIp(ip, port);
-
-        while (true) {
-            server.listen(addr) catch {
-                server.close();
-                continue;
-            };
-            break;
-        }
-
-        // Handling connections
-        while (true) {
-            const conn = if (server.accept()) |conn| conn else |_| continue;
-            defer conn.stream.close();
-
-            var buffer = std.ArrayList(u8).init(allocator);
-            defer buffer.deinit();
-
-            var chunk_buf: [4096]u8 = undefined;
-            // Collect max 4096 bytes of data from the stream into the chunk_buf. Then add it
-            // to the ArrayList. Repeat this until request stream ends by counting the appearence
-            // of "\r\n"
-            while (true) {
-                _ = try conn.stream.read(chunk_buf[0..]);
-                try buffer.appendSlice(chunk_buf[0..]);
-                if (std.mem.containsAtLeast(u8, buffer.items, 2, "\r\n")) break;
-            }
-            // Building the Request
-            // TODO write Request building!
-
-            // TODO: Write the loop to handle the requests!
-            // TODO: Create Response!
-            _ = try conn.stream.write("HTTP/1.1 200 OK\r\n");
-            _ = try conn.stream.write("Content-Type: text/html\r\n\r\n");
-            _ = try conn.stream.write("<h1>It works!</h1>");
-        }
     }
 };

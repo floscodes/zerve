@@ -1,7 +1,8 @@
 const types = @import("types.zig");
 const status = @import("status.zig");
+const server = @import("server.zig");
 
-pub const Server = types.Server;
+pub const Server = server.Server;
 pub const Route = types.Route;
 pub const Header = types.Header;
 pub const Request = types.Request;
