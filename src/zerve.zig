@@ -9,3 +9,9 @@ pub const Request = types.Request;
 pub const Response = types.Response;
 pub const Method = types.Method;
 pub const HTTP_Version = types.HTTP_Version;
+
+test "Run all tests" {
+    _ = types;
+    _ = status;
+    _ = server;
+}
