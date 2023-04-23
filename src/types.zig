@@ -15,6 +15,7 @@ pub const Header = struct {
     key: []const u8,
     value: []const u8,
 
+    /// Turns the header key and value into a string.
     pub fn stringify(header: Header) []const u8 {
         var string = std.ArrayList(u8).init(allocator);
         string.appendSlice(header.key) catch unreachable;
@@ -159,7 +160,7 @@ pub const Response = struct {
     body: []const u8 = "",
 
     /// Write a simple response.
-    pub fn write(s: []const u8) Response {
+    pub fn new(s: []const u8) Response {
         return Response{ .body = s };
     }
 
@@ -176,31 +177,6 @@ pub const Response = struct {
     /// Send a response with status forbidden.
     pub fn forbidden(s: []u8) Response {
         return Response{ .status = stat.Status.FORBIDDEN, .body = s };
-    }
-
-    pub fn stringify(r: Response) ![]const u8 {
-        var res = std.ArrayList(u8).init(allocator);
-        try res.appendSlice(r.httpVersion.stringify());
-        try res.append(' ');
-        try res.appendSlice(r.status.stringify());
-        try res.appendSlice("\r\n");
-
-        for (r.headers) |header| {
-            try res.appendSlice(header.stringify());
-            try res.appendSlice("\n");
-        }
-        try res.appendSlice("\r\n\r\n");
-        try res.appendSlice(r.body);
-
-        return try res.toOwnedSlice();
-    }
-
-    test "stringify Response" {
-        const eql = std.mem.eql;
-        const headers = [_]Header{.{ .key = "User-Agent", .value = "Testbot" }};
-        const res = Response{ .headers = &headers, .body = "This is the body!" };
-
-        try std.testing.expect(eql(u8, try res.stringify(), "HTTP/1.1 200 OK\r\nUser-Agent: Testbot\n\r\n\r\nThis is the body!"));
     }
 };
 
