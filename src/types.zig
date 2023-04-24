@@ -1,6 +1,7 @@
 const std = @import("std");
 const tuple = std.meta.Tuple;
 const allocator = std.heap.page_allocator;
+const eql = std.mem.eql;
 const stat = @import("./status.zig");
 
 /// Route is a touple that consists of the path and the function that shall handle it.
@@ -21,7 +22,7 @@ pub const Header = struct {
         string.appendSlice(header.key) catch unreachable;
         string.appendSlice(": ") catch unreachable;
         string.appendSlice(header.value) catch unreachable;
-        const out = string.toOwnedSlice() catch "";
+        const out = string.toOwnedSlice();
         return out;
     }
 
@@ -36,7 +37,7 @@ pub const Header = struct {
 pub const HTTP_Version = enum {
     HTTP1_1,
     HTTP2,
-    
+
     /// Parses from `[]u8`
     pub fn parse(s: []const u8) HTTP_Version {
         if (std.mem.containsAtLeast(u8, s, 1, "2")) return HTTP_Version.HTTP2 else return HTTP_Version.HTTP1_1;
@@ -63,16 +64,17 @@ pub const Method = enum {
     PATCH,
     UNKNOWN,
 
-    fn parse(value: []const u8) Method {
-        if (std.mem.containsAtLeast(u8, value, 1, "GET")) return Method.GET;
-        if (std.mem.containsAtLeast(u8, value, 1, "POST")) return Method.POST;
-        if (std.mem.containsAtLeast(u8, value, 1, "PUT")) return Method.PUT;
-        if (std.mem.containsAtLeast(u8, value, 1, "HEAD")) return Method.HEAD;
-        if (std.mem.containsAtLeast(u8, value, 1, "DELETE")) return Method.DELETE;
-        if (std.mem.containsAtLeast(u8, value, 1, "CONNECT")) return Method.CONNECT;
-        if (std.mem.containsAtLeast(u8, value, 1, "OPTIONS")) return Method.OPTIONS;
-        if (std.mem.containsAtLeast(u8, value, 1, "TRACE")) return Method.TRACE;
-        if (std.mem.containsAtLeast(u8, value, 1, "PATCH")) return Method.PATCH;
+    /// Parses the Method from a string
+    pub fn parse(value: []const u8) Method {
+        if (eql(u8, value, "GET") or eql(u8, value, "get")) return Method.GET;
+        if (eql(u8, value, "POST") or eql(u8, value, "post")) return Method.POST;
+        if (eql(u8, value, "PUT") or eql(u8, value, "put")) return Method.PUT;
+        if (eql(u8, value, "HEAD") or eql(u8, value, "head")) return Method.HEAD;
+        if (eql(u8, value, "DELETE") or eql(u8, value, "delete")) return Method.DELETE;
+        if (eql(u8, value, "CONNECT") or eql(u8, value, "connect")) return Method.CONNECT;
+        if (eql(u8, value, "OPTIONS") or eql(u8, value, "options")) return Method.OPTIONS;
+        if (eql(u8, value, "TRACE") or eql(u8, value, "trace")) return Method.TRACE;
+        if (eql(u8, value, "PATCH") or eql(u8, value, "patch")) return Method.PATCH;
         return Method.UNKNOWN;
     }
 
@@ -101,53 +103,10 @@ pub const Request = struct {
     httpVersion: HTTP_Version,
     /// Represents the request headers sent by the client
     headers: []const Header,
-    /// Teh Request URI
+    /// The Request URI
     uri: []const u8,
     /// Represents the request body sent by the client
     body: []const u8,
-
-    pub fn build(bytes: []const u8) !Request {
-        var req: Request = undefined;
-        var parts = std.mem.split(u8, bytes, "\r\n");
-        const header = parts.first();
-        var header_lines = std.mem.split(u8, header, "\n");
-        var header_buffer = std.ArrayList(Header).init(allocator);
-
-        var header_items = std.mem.split(u8, header_lines.first(), " ");
-        req.method = Method.parse(header_items.first());
-        req.uri = if (header_items.next()) |value| value else "";
-
-        if (header_items.next()) |value| {
-            req.httpVersion = HTTP_Version.parse(value);
-        } else {
-            req.httpVersion = HTTP_Version.HTTP1_1;
-        }
-
-        while (header_lines.next()) |line| {
-            var headers = std.mem.split(u8, line, ": ");
-            const item1 = headers.first();
-            const item2 = if (headers.next()) |value| value else unreachable;
-            const header_pair = Header{ .key = item1, .value = item2 };
-            try header_buffer.append(header_pair);
-        }
-        req.headers = header_buffer.toOwnedSlice() catch &[_]Header{Header{ .key = "", .value = "" }};
-        req.body = if (parts.next()) |value| value else "";
-        return req;
-    }
-
-    // Test the Request build function
-    test "build a Request" {
-        const bytes = "GET /test HTTP/1.1\nHost: localhost:8080\nUser-Agent: Testbot\r\nThis is the test body!";
-        const req = try Request.build(bytes);
-        try std.testing.expect(req.method == Method.GET);
-        try std.testing.expect(req.httpVersion == HTTP_Version.HTTP1_1);
-        try std.testing.expect(std.mem.eql(u8, req.uri, "/test"));
-        try std.testing.expect(std.mem.eql(u8, req.headers[1].key, "User-Agent"));
-        try std.testing.expect(std.mem.eql(u8, req.headers[1].value, "Testbot"));
-        try std.testing.expect(std.mem.eql(u8, req.headers[0].key, "Host"));
-        try std.testing.expect(std.mem.eql(u8, req.headers[0].value, "localhost:8080"));
-        try std.testing.expect(std.mem.eql(u8, req.body, "This is the test body!"));
-    }
 };
 
 /// Represents a standard http-Response sent by the webapp (server).
@@ -162,7 +121,7 @@ pub const Response = struct {
     body: []const u8 = "",
 
     /// Write a simple response.
-    pub fn new(s: []const u8) Response {
+    pub fn write(s: []const u8) Response {
         return Response{ .body = s };
     }
 

@@ -1,6 +1,8 @@
 # zerve
 A simple framework for writing web services in zig.
 
+## Relies on zig 0.10.1 !
+
 
 ## Create a simple web app
 
@@ -76,15 +78,10 @@ pub const Request = struct {
     httpVersion: HTTP_Version,
     /// Represents the request headers sent by the client
     headers: []const Header,
-    /// Teh Request URI
+    /// The Request URI
     uri: []const u8,
     /// Represents the request body sent by the client
     body: []const u8,
-
-    /// Builds a `Request` struct from `[]u8`
-    pub fn build(bytes: []const u8) !Request {...}
-
-    test "build a Request" {...}
 };
 ```
 
