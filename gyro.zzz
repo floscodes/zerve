@@ -1,0 +1,13 @@
+pkgs:
+  zerve:
+    version: 0.0.1
+    license: MIT
+    description: Simple web framework for zig
+    source_url: "https://github.com/floscodes/zerve"
+    root: src/zerve.zig
+    files:
+      README.md
+      LICENSE
+      zig.mod
+      build.zig
+      src/*.zig
