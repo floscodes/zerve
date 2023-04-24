@@ -58,9 +58,12 @@ pub const Server = struct {
                 var req_path = r[0];
                 // Trim a possible trailing slash from Route path in order to accept it during the matching process.
                 if (req_path.len > 1) req_path = std.mem.trimRight(u8, req_path, "/");
+                // Check if there is a match
                 if (eql(u8, req_path, req.uri)) {
-                    // If URI matches, change response with handling function.
+                    // Change response with handling function in case of match.
                     res = r[1](req);
+                    // Exit loop in case of match
+                    break;
                 }
             }
             // Stringify the Response and send it to the client.
