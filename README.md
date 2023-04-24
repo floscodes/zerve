@@ -1,17 +1,6 @@
 # zerve
 A simple framework for writing web services in zig.
 
-[Create a simple web app]("#create-a-simple-web-app")
-[Types]("#types)
-    [Route]("#route")
-    [Handler Functions]("#handler-functions")
-    [Request]("#request)
-    [Response]("#response")
-    [Header]("#header")
-    [Method]("#method")
-    [HTTP-Version]("#http-version)"
-[Namespaces]("#namespaces")
-    [Server]("#server")
 
 ## Create a simple web app
 
