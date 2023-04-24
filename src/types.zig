@@ -36,10 +36,12 @@ pub const Header = struct {
 pub const HTTP_Version = enum {
     HTTP1_1,
     HTTP2,
-
+    
+    /// Parses from `[]u8`
     pub fn parse(s: []const u8) HTTP_Version {
         if (std.mem.containsAtLeast(u8, s, 1, "2")) return HTTP_Version.HTTP2 else return HTTP_Version.HTTP1_1;
     }
+    /// Stringifies `HTTP_Version`
     pub fn stringify(version: HTTP_Version) []const u8 {
         switch (version) {
             HTTP_Version.HTTP1_1 => return "HTTP/1.1",
