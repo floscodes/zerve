@@ -4,7 +4,10 @@ A simple framework for writing web services in zig.
 ## Create a simple web app
 
 ```zig
-usingnamespace @import("zerve");
+const zrv = @import("zerve");
+const Request = zrv.Request;
+const Response = zrv.Response;
+const Server = zrv.Server;
 const allocator = std.heap.page_allocator;
 
 fn index(req: Request) Response {
