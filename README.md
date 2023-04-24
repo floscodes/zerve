@@ -28,7 +28,10 @@ fn writeJson(req: Request) Response {
 pub fn main() !void {
      const rt = [_]Route{.{"/", index}, .{"/about", about}, .{"/json", writeJson}};
 
-     try Server.listen("0.0.0.0", 8080, &rt, allocator);
+     try Server.listen("0.0.0.0", 8080, &rt, allocator); // listens to http://localhost:8080
+                                                         // http://localhost:8080/  "hello!"
+                                                         // http://localhost:8080/about "about site"
+                                                         // http://localhost:8080/json  "[1, 2, 3, 4]" (JSON-Response)
 }
 
 ```
