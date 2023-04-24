@@ -8,6 +8,7 @@ const zrv = @import("zerve");
 const Request = zrv.Request;
 const Response = zrv.Response;
 const Server = zrv.Server;
+const Route = zrv.Route;
 const allocator = std.heap.page_allocator;
 
 fn index(req: Request) Response {
