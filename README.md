@@ -1,2 +1,2 @@
 # zerve
-zerve is a small framework for writing the server side of web apps in zig.
+A simple framework for writing web services in zig.
