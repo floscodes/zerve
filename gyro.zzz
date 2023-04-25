@@ -11,3 +11,9 @@ pkgs:
       zig.mod
       build.zig
       src/*.zig
+    tags:
+      http
+      server
+      framework
+      http-server
+      server-side
