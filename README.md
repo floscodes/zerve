@@ -1,13 +1,13 @@
 # zerve
 A simple framework for writing web services in zig.
 
-## Requires at least zig 0.11.0!
+## Requires zig 0.11.0 or higher!
 
 
 ## Create a simple web app
 
 ```zig
-const zrv = @import("zerve");
+const zrv = @import("zerve"); // Or set the path to zerve.zig e.g. @import("zerve-main/src/zerve.zig");
 const Request = zrv.Request;
 const Response = zrv.Response;
 const Server = zrv.Server;
