@@ -18,16 +18,11 @@ pub const Server = struct {
         // Init server
         const server_options: std.net.StreamServer.Options = .{};
         var server = std.net.StreamServer.init(server_options);
+        defer server.close();
         defer server.deinit();
         const addr = try std.net.Address.parseIp(ip, port);
 
-        while (true) {
-            server.listen(addr) catch {
-                server.close();
-                continue;
-            };
-            break;
-        }
+        try server.listen(addr);
 
         // Handling connections
         while (true) {
@@ -46,7 +41,7 @@ pub const Server = struct {
                 if (std.mem.containsAtLeast(u8, buffer.items, 2, "\r\n")) break;
             }
             // Build the Request
-            const req_stream = buffer.toOwnedSlice();
+            const req_stream = try buffer.toOwnedSlice();
             var req = try buildRequest(req_stream, allocator);
 
             // if there ist a path set in the uri trim the trailing slash in order to accept it later during the matching check.
@@ -101,7 +96,7 @@ fn buildRequest(bytes: []const u8, allocator: std.mem.Allocator) !Request {
         const header_pair = Header{ .key = item1, .value = item2 };
         try header_buffer.append(header_pair);
     }
-    req.headers = header_buffer.toOwnedSlice();
+    req.headers = try header_buffer.toOwnedSlice();
     req.body = if (parts.next()) |value| value else "";
     return req;
 }
@@ -129,13 +124,13 @@ fn stringifyResponse(r: Response, allocator: std.mem.Allocator) ![]const u8 {
     try res.appendSlice("\r\n");
 
     for (r.headers) |header| {
-        try res.appendSlice(header.stringify());
+        try res.appendSlice(try header.stringify());
         try res.appendSlice("\n");
     }
     try res.appendSlice("\r\n\r\n");
     try res.appendSlice(r.body);
 
-    return res.toOwnedSlice();
+    return try res.toOwnedSlice();
 }
 
 test "stringify Response" {

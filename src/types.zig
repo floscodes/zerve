@@ -17,12 +17,12 @@ pub const Header = struct {
     value: []const u8,
 
     /// Turns the header key and value into a string.
-    pub fn stringify(header: Header) []const u8 {
+    pub fn stringify(header: Header) ![]const u8 {
         var string = std.ArrayList(u8).init(allocator);
         string.appendSlice(header.key) catch unreachable;
         string.appendSlice(": ") catch unreachable;
         string.appendSlice(header.value) catch unreachable;
-        const out = string.toOwnedSlice();
+        const out = try string.toOwnedSlice();
         return out;
     }
 
