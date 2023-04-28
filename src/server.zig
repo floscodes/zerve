@@ -151,3 +151,12 @@ test "stringify Response" {
     defer allocator.free(res_str);
     try std.testing.expect(eql(u8, res_str, "HTTP/1.1 200 OK\r\nUser-Agent: Testbot\n\r\n\r\nThis is the body!"));
 }
+
+test "Run server" {
+    const rt = [_]types.Route{.{ "/", handlefn }};
+    try Server.listen("0.0.0.0", 8080, &rt, std.testing.allocator);
+}
+// Function for test "Run Server"
+fn handlefn(_: types.Request) types.Response {
+    return types.Response.write("<h1>Run Server Test OK!</h1>");
+}
