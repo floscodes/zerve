@@ -30,6 +30,7 @@ pub const Server = struct {
             defer conn.stream.close();
 
             var buffer = std.ArrayList(u8).init(allocator);
+            defer buffer.deinit();
 
             var chunk_buf: [4096]u8 = undefined;
             // Collect max 4096 bytes of data from the stream into the chunk_buf. Then add it
@@ -42,7 +43,9 @@ pub const Server = struct {
             }
             // Build the Request
             const req_stream = try buffer.toOwnedSlice();
+            defer allocator.free(req_stream);
             var req = try buildRequest(req_stream, allocator);
+            defer allocator.free(req.headers);
 
             // if there ist a path set in the uri trim the trailing slash in order to accept it later during the matching check.
             if (req.uri.len > 1) req.uri = std.mem.trimRight(u8, req.uri, "/");
@@ -64,8 +67,11 @@ pub const Server = struct {
                     break;
                 }
             }
-            // Stringify the Response and send it to the client.
+            // Stringify the Response.
             const response_string = try stringifyResponse(res, allocator);
+            // Free memory after writing Response and sending it to client.
+            defer allocator.free(response_string);
+            // Write stringified Response and send it to client.
             _ = try conn.stream.write(response_string);
         }
     }
@@ -104,7 +110,9 @@ fn buildRequest(bytes: []const u8, allocator: std.mem.Allocator) !Request {
 // Test the Request build function
 test "build a Request" {
     const bytes = "GET /test HTTP/1.1\nHost: localhost:8080\nUser-Agent: Testbot\r\nThis is the test body!";
-    const req = try buildRequest(bytes);
+    const allocator = std.testing.allocator;
+    const req = try buildRequest(bytes, allocator);
+    defer allocator.free(req.headers);
     try std.testing.expect(req.method == Method.GET);
     try std.testing.expect(req.httpVersion == HTTP_Version.HTTP1_1);
     try std.testing.expect(std.mem.eql(u8, req.uri, "/test"));
@@ -124,7 +132,9 @@ fn stringifyResponse(r: Response, allocator: std.mem.Allocator) ![]const u8 {
     try res.appendSlice("\r\n");
 
     for (r.headers) |header| {
-        try res.appendSlice(try header.stringify());
+        try res.appendSlice(header.key);
+        try res.appendSlice(": ");
+        try res.appendSlice(header.value);
         try res.appendSlice("\n");
     }
     try res.appendSlice("\r\n\r\n");
@@ -134,9 +144,10 @@ fn stringifyResponse(r: Response, allocator: std.mem.Allocator) ![]const u8 {
 }
 
 test "stringify Response" {
-    const allocator = std.heap.page_allocator;
+    const allocator = std.testing.allocator;
     const headers = [_]types.Header{.{ .key = "User-Agent", .value = "Testbot" }};
     const res = Response{ .headers = &headers, .body = "This is the body!" };
-
-    try std.testing.expect(eql(u8, try stringifyResponse(res, allocator), "HTTP/1.1 200 OK\r\nUser-Agent: Testbot\n\r\n\r\nThis is the body!"));
+    const res_str = try stringifyResponse(res, allocator);
+    defer allocator.free(res_str);
+    try std.testing.expect(eql(u8, res_str, "HTTP/1.1 200 OK\r\nUser-Agent: Testbot\n\r\n\r\nThis is the body!"));
 }

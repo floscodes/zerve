@@ -15,22 +15,6 @@ pub const Route = tuple(&.{ []const u8, *const fn (Request) Response });
 pub const Header = struct {
     key: []const u8,
     value: []const u8,
-
-    /// Turns the header key and value into a string.
-    pub fn stringify(header: Header) ![]const u8 {
-        var string = std.ArrayList(u8).init(allocator);
-        string.appendSlice(header.key) catch unreachable;
-        string.appendSlice(": ") catch unreachable;
-        string.appendSlice(header.value) catch unreachable;
-        const out = try string.toOwnedSlice();
-        return out;
-    }
-
-    test "stringify Header" {
-        var header = Header{ .key = "User-Agent", .value = "Testbot" };
-        const compare = "User-Agent: Testbot";
-        try std.testing.expect(std.mem.eql(u8, header.stringify(), compare[0..]));
-    }
 };
 
 /// The HTTP Version.
