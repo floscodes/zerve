@@ -1,4 +1,6 @@
 const std = @import("std");
+pub const io_mode: std.io.Mode = .evented;
+
 const eql = std.mem.eql;
 
 const types = @import("types.zig");
@@ -18,16 +20,26 @@ pub const Server = struct {
         // Init server
         const server_options: std.net.StreamServer.Options = .{};
         var server = std.net.StreamServer.init(server_options);
-        defer server.close();
+        //defer server.close();
         defer server.deinit();
         const addr = try std.net.Address.parseIp(ip, port);
 
-        try server.listen(addr);
+        while (true) {
+            if (server.listen(addr)) |_| {
+                break;
+            } else |_| {
+                server.close();
+                continue;
+            }
+        }
 
         // Handling connections
         while (true) {
             const conn = if (server.accept()) |conn| conn else |_| continue;
             defer conn.stream.close();
+
+            // const client_ip = try std.fmt.allocPrint(allocator, "{}", .{conn.address});
+            // std.debug.print("Client-IP:{s}\n", .{client_ip});
 
             var buffer = std.ArrayList(u8).init(allocator);
             defer buffer.deinit();
