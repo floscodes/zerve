@@ -24,22 +24,14 @@ pub const Server = struct {
         defer server.deinit();
         const addr = try std.net.Address.parseIp(ip, port);
 
-        while (true) {
-            if (server.listen(addr)) |_| {
-                break;
-            } else |_| {
-                server.close();
-                continue;
-            }
-        }
+        try server.listen(addr);
 
         // Handling connections
         while (true) {
             const conn = if (server.accept()) |conn| conn else |_| continue;
             defer conn.stream.close();
 
-            // const client_ip = try std.fmt.allocPrint(allocator, "{}", .{conn.address});
-            // std.debug.print("Client-IP:{s}\n", .{client_ip});
+            const client_ip = try std.fmt.allocPrint(allocator, "{}", .{conn.address});
 
             var buffer = std.ArrayList(u8).init(allocator);
             defer buffer.deinit();
@@ -56,7 +48,7 @@ pub const Server = struct {
             // Build the Request
             const req_stream = try buffer.toOwnedSlice();
             defer allocator.free(req_stream);
-            var req = try buildRequest(req_stream, allocator);
+            var req = try buildRequest(client_ip, req_stream, allocator);
             defer allocator.free(req.headers);
 
             // if there ist a path set in the uri trim the trailing slash in order to accept it later during the matching check.
@@ -90,8 +82,9 @@ pub const Server = struct {
 };
 
 // Function that build the request from stream
-fn buildRequest(bytes: []const u8, allocator: std.mem.Allocator) !Request {
+fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.Allocator) !Request {
     var req: Request = undefined;
+    req.ip = client_ip;
     var parts = std.mem.split(u8, bytes, "\r\n");
     const header = parts.first();
     var header_lines = std.mem.split(u8, header, "\n");
@@ -123,7 +116,8 @@ fn buildRequest(bytes: []const u8, allocator: std.mem.Allocator) !Request {
 test "build a Request" {
     const bytes = "GET /test HTTP/1.1\nHost: localhost:8080\nUser-Agent: Testbot\r\nThis is the test body!";
     const allocator = std.testing.allocator;
-    const req = try buildRequest(bytes, allocator);
+    const client_ip = "127.0.0.1";
+    const req = try buildRequest(client_ip, bytes, allocator);
     defer allocator.free(req.headers);
     try std.testing.expect(req.method == Method.GET);
     try std.testing.expect(req.httpVersion == HTTP_Version.HTTP1_1);

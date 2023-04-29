@@ -85,6 +85,8 @@ pub const Request = struct {
     method: Method,
     /// HTTP-Version of the Request sent by the client
     httpVersion: HTTP_Version,
+    /// Represents the client's IP-Address.
+    ip: []const u8,
     /// Represents the request headers sent by the client
     headers: []const Header,
     /// The Request URI
