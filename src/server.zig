@@ -20,8 +20,8 @@ pub const Server = struct {
         // Init server
         const server_options: std.net.StreamServer.Options = .{};
         var server = std.net.StreamServer.init(server_options);
-        //defer server.close();
         defer server.deinit();
+        defer server.close();
         const addr = try std.net.Address.parseIp(ip, port);
 
         try server.listen(addr);
