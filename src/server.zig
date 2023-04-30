@@ -32,6 +32,7 @@ pub const Server = struct {
             defer conn.stream.close();
 
             const client_ip = try std.fmt.allocPrint(allocator, "{}", .{conn.address});
+            defer allocator.free(client_ip);
 
             var buffer = std.ArrayList(u8).init(allocator);
             defer buffer.deinit();
