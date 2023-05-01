@@ -16,12 +16,12 @@ const allocator = std.heap.page_allocator; // Choose any allocator you want!
 
 fn index(req: Request) Response {
     _=req;
-    return Response.new("hello!");
+    return Response.write("hello!");
 }
 
 fn about(req: Request) Response {
     _=req;
-    return Response.new("about site");
+    return Response.write("about site");
 }
 
 fn writeJson(req: Request) Response {
@@ -63,7 +63,7 @@ Example:
 ```zig
 fn hello(req: Request) Response {
     _ = req;
-    return Response.new("hello"); // `Server` will return a Reponse with body "hello". You will see "hello" on your browser.
+    return Response.write("hello"); // `Server` will return a Reponse with body "hello". You will see "hello" on your browser.
 }
 ```
 
