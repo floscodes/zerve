@@ -1,8 +1,6 @@
 # zerve
 A simple framework for writing web services in zig.
 
-## Requires zig 0.11.0 or higher!
-
 
 ## Create a simple web app
 
