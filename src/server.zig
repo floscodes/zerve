@@ -21,7 +21,6 @@ pub const Server = struct {
         const server_options: std.net.StreamServer.Options = .{};
         var server = std.net.StreamServer.init(server_options);
         defer server.deinit();
-        defer server.close();
         const addr = try std.net.Address.parseIp(ip, port);
 
         try server.listen(addr);
@@ -67,7 +66,7 @@ pub const Server = struct {
                 // Check if there is a match
                 if (eql(u8, req_path, req.uri)) {
                     // Change response with handling function in case of match.
-                    res = r[1](req);
+                    res = r[1](&req);
                     // Exit loop in case of match
                     break;
                 }
@@ -164,6 +163,6 @@ test "Run server" {
     try Server.listen("0.0.0.0", 8080, &rt, std.testing.allocator);
 }
 // Function for test "Run Server"
-fn handlefn(_: types.Request) types.Response {
+fn handlefn(_: *types.Request) types.Response {
     return types.Response.write("<h1>Run Server Test OK!</h1>");
 }

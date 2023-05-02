@@ -14,17 +14,17 @@ const Server = zrv.Server;
 const Route = zrv.Route;
 const allocator = std.heap.page_allocator; // Choose any allocator you want!
 
-fn index(req: Request) Response {
+fn index(req: *Request) Response {
     _=req;
     return Response.write("hello!");
 }
 
-fn about(req: Request) Response {
+fn about(req: *Request) Response {
     _=req;
     return Response.write("about site");
 }
 
-fn writeJson(req: Request) Response {
+fn writeJson(req: *Request) Response {
     _=req;
     Response.json("[1, 2, 3, 4]");
 }
@@ -57,11 +57,11 @@ const rt = [_]Route{.{"/hello", helloFunction}};
 
 ### Handler Functions
 
-Every Request is handled by a handler function. It has to be of this type: `fn(req: Request) Response`
+Every Request is handled by a handler function. It has to be of this type: `fn(req: *Request) Response`
 
 Example:
 ```zig
-fn hello(req: Request) Response {
+fn hello(req: *Request) Response {
     _ = req;
     return Response.write("hello"); // `Server` will return a Reponse with body "hello". You will see "hello" on your browser.
 }

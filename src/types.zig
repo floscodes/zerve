@@ -8,7 +8,7 @@ const stat = @import("./status.zig");
 /// e.g. `const rt = Route{"/home", home};`
 /// It it usual that a webapp handles more than one path so you can declare an array of `Route`
 /// e.g. `const rt =[_]Route{.{"/index", index}, .{"/home", home}};`
-pub const Route = tuple(&.{ []const u8, *const fn (Request) Response });
+pub const Route = tuple(&.{ []const u8, *const fn (*Request) Response });
 
 /// A header of a `Request` or a `Response`.
 /// It is usual that more than one is sent, so you can declare an array.
