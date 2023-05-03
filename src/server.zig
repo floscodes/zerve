@@ -1,6 +1,6 @@
 const std = @import("std");
 pub const io_mode: std.io.Mode = .evented;
-const zig_version = @import("builtin").zig_version;
+const olderVersion: bool = @import("builtin").zig_version.minor < 11;
 const eql = std.mem.eql;
 
 const types = @import("types.zig");
@@ -46,7 +46,7 @@ pub const Server = struct {
                 if (std.mem.containsAtLeast(u8, buffer.items, 2, "\r\n")) break;
             }
             // Build the Request
-            const req_stream = if (zig_version.minor < 11) buffer.toOwnedSlice() else try buffer.toOwnedSlice();
+            const req_stream = if (olderVersion) buffer.toOwnedSlice() else try buffer.toOwnedSlice();
             defer allocator.free(req_stream);
             var req = try buildRequest(client_ip, req_stream, allocator);
             defer allocator.free(req.headers);
@@ -107,7 +107,7 @@ fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.All
         const header_pair = Header{ .key = item1, .value = item2 };
         try header_buffer.append(header_pair);
     }
-    req.headers = if (zig_version.minor < 11) header_buffer.toOwnedSlice() else try header_buffer.toOwnedSlice();
+    req.headers = if (olderVersion) header_buffer.toOwnedSlice() else try header_buffer.toOwnedSlice();
     req.body = if (parts.next()) |value| value else "";
     return req;
 }
@@ -146,7 +146,7 @@ fn stringifyResponse(r: Response, allocator: std.mem.Allocator) ![]const u8 {
     try res.appendSlice("\r\n\r\n");
     try res.appendSlice(r.body);
 
-    return if (zig_version.minor < 11) res.toOwnedSlice() else try res.toOwnedSlice();
+    return if (olderVersion) res.toOwnedSlice() else try res.toOwnedSlice();
 }
 
 test "stringify Response" {
