@@ -35,7 +35,7 @@ fn about(req: *Request) Response {
 
 fn writeJson(req: *Request) Response {
     _=req;
-    Response.json("[1, 2, 3, 4]");
+    return Response.json("[1, 2, 3, 4]");
 }
 
 pub fn main() !void {
