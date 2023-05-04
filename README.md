@@ -1,6 +1,7 @@
 # zerve
 A simple framework for writing web services in zig.
 
+* [Create a simple Web App](#create-a-simple-web-app)
 
 ## Create a simple web app
 
