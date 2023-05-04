@@ -136,9 +136,6 @@ Every Request or Response has Headers represented by an Array of Headers. Every 
 pub const Header = struct {
     key: []const u8,
     value: []const u8,
-
-    /// Turns the header key and value into a string.
-    pub fn stringify(header: Header) []const u8 {...}
 };
 ```
 
