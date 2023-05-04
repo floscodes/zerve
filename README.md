@@ -2,6 +2,8 @@
 A simple framework for writing web services in zig.
 
 * [Create a simple Web App](#create-a-simple-web-app)
+* [Types](#types)
+    * [Route](#route)
 
 ## Create a simple web app
 
