@@ -3,6 +3,7 @@ const tuple = std.meta.Tuple;
 const allocator = std.heap.page_allocator;
 const eql = std.mem.eql;
 const stat = @import("./status.zig");
+const rc = @import("./res_cookie.zig");
 
 /// Route is a touple that consists of the path and the function that shall handle it.
 /// e.g. `const rt = Route{"/home", home};`
@@ -103,6 +104,8 @@ pub const Response = struct {
     status: stat.Status = stat.Status.OK,
     /// Response eaders sent by the server
     headers: []const Header = &[_]Header{.{ .key = "Content-Type", .value = "text/html; charset=utf-8" }},
+    /// Cookies to be sent
+    cookies: []const rc.Cookie = &[_]rc.Cookie{.{ .name = "", .value = "" }},
     /// Response body sent by the server
     body: []const u8 = "",
 

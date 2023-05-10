@@ -136,12 +136,18 @@ fn stringifyResponse(r: Response, allocator: std.mem.Allocator) ![]const u8 {
     try res.append(' ');
     try res.appendSlice(r.status.stringify());
     try res.appendSlice("\r\n");
-
+    // Add headers
     for (r.headers) |header| {
         try res.appendSlice(header.key);
         try res.appendSlice(": ");
         try res.appendSlice(header.value);
         try res.appendSlice("\n");
+    }
+    // Add cookie-headers
+    for (r.cookies) |cookie| {
+        const c = try cookie.stringify(allocator);
+        defer allocator.free(c);
+        if (!eql(u8, cookie.name, "") and !eql(u8, cookie.value, "")) try res.appendSlice(c);
     }
     try res.appendSlice("\r\n\r\n");
     try res.appendSlice(r.body);
@@ -159,10 +165,14 @@ test "stringify Response" {
 }
 
 test "Run server" {
+    // Set route
     const rt = [_]types.Route{.{ "/", handlefn }};
     try Server.listen("0.0.0.0", 8080, &rt, std.testing.allocator);
 }
 // Function for test "Run Server"
 fn handlefn(_: *types.Request) types.Response {
-    return types.Response.write("<h1>Run Server Test OK!</h1>");
+    // create Response and add cookie to test cookie setting
+    const rc = @import("./res_cookie.zig");
+    var res = types.Response{ .body = "<h1>Run Server Test OK!</h1>", .cookies = &[_]rc.Cookie{.{ .name = "Test-Cookie", .value = "Test", .domain = "localhost:8080" }} };
+    return res;
 }
