@@ -50,6 +50,7 @@ pub const Server = struct {
             defer allocator.free(req_stream);
             var req = try buildRequest(client_ip, req_stream, allocator);
             defer allocator.free(req.headers);
+            defer allocator.free(req.cookies);
 
             // if there ist a path set in the uri trim the trailing slash in order to accept it later during the matching check.
             if (req.uri.len > 1) req.uri = std.mem.trimRight(u8, req.uri, "/");
@@ -89,6 +90,7 @@ fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.All
     const header = parts.first();
     var header_lines = std.mem.split(u8, header, "\n");
     var header_buffer = std.ArrayList(Header).init(allocator);
+    var cookie_buffer = std.ArrayList(Request.Cookie).init(allocator);
 
     var header_items = std.mem.split(u8, header_lines.first(), " ");
     req.method = Method.parse(header_items.first());
@@ -103,10 +105,19 @@ fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.All
     while (header_lines.next()) |line| {
         var headers = std.mem.split(u8, line, ": ");
         const item1 = headers.first();
-        const item2 = if (headers.next()) |value| value else unreachable;
+        // Check if header is a cookie and parse it
+        if (eql(u8, item1, "Cookie") or eql(u8, item1, "cookie")) {
+            const item2 = if (headers.next()) |value| value else "";
+            const cookies = try Request.Cookie.parse(item2, allocator);
+            defer allocator.free(cookies);
+            try cookie_buffer.appendSlice(cookies);
+            continue;
+        }
+        const item2 = if (headers.next()) |value| value else "";
         const header_pair = Header{ .key = item1, .value = item2 };
         try header_buffer.append(header_pair);
     }
+    req.cookies = if (olderVersion) cookie_buffer.toOwnedSlice() else try cookie_buffer.toOwnedSlice();
     req.headers = if (olderVersion) header_buffer.toOwnedSlice() else try header_buffer.toOwnedSlice();
     req.body = if (parts.next()) |value| value else "";
     return req;
@@ -172,7 +183,6 @@ test "Run server" {
 // Function for test "Run Server"
 fn handlefn(_: *types.Request) types.Response {
     // create Response and add cookie to test cookie setting
-    const rc = @import("./res_cookie.zig");
-    var res = types.Response{ .body = "<h1>Run Server Test OK!</h1>", .cookies = &[_]rc.Cookie{.{ .name = "Test-Cookie", .value = "Test", .domain = "localhost:8080" }} };
+    var res = types.Response{ .body = "<h1>Run Server Test OK!</h1>", .cookies = &[_]Response.Cookie{.{ .name = "Test-Cookie", .value = "Test", .domain = "localhost:8080" }} };
     return res;
 }

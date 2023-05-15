@@ -4,6 +4,7 @@ const allocator = std.heap.page_allocator;
 const eql = std.mem.eql;
 const stat = @import("./status.zig");
 const rescookie = @import("./res_cookie.zig");
+const reqcookie = @import("./req_cookie.zig");
 
 /// Route is a touple that consists of the path and the function that shall handle it.
 /// e.g. `const rt = Route{"/home", home};`
@@ -90,10 +91,14 @@ pub const Request = struct {
     ip: []const u8,
     /// Represents the request headers sent by the client
     headers: []const Header,
+    /// Request Cookies
+    cookies: []const Cookie,
     /// The Request URI
     uri: []const u8,
     /// Represents the request body sent by the client
     body: []const u8,
+
+    pub const Cookie = reqcookie.Cookie;
 };
 
 /// Represents a standard http-Response sent by the webapp (server).
