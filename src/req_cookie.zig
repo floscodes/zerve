@@ -27,8 +27,11 @@ pub const Cookie = struct {
 
 test "Parse Request Cookie(s)" {
     const allocator = std.testing.allocator;
-    const cookie_string = "test_cookie=successful; second_cookie: also successful!";
+    const cookie_string = "Test-Cookie=successful; Second-Cookie=also successful";
     const cookie = try Cookie.parse(cookie_string, allocator);
     defer allocator.free(cookie);
     try std.testing.expect(std.mem.eql(u8, cookie[0].value, "successful"));
+    try std.testing.expect(std.mem.eql(u8, cookie[0].name, "Test-Cookie"));
+    try std.testing.expect(std.mem.eql(u8, cookie[1].name, "Second-Cookie"));
+    try std.testing.expect(std.mem.eql(u8, cookie[1].value, "also successful"));
 }
