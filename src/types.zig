@@ -97,7 +97,7 @@ pub const Request = struct {
     uri: []const u8,
     /// Represents the request body sent by the client
     body: []const u8,
-
+    /// Represents the sent cookies
     pub const Cookie = reqcookie.Cookie;
 };
 
@@ -133,7 +133,7 @@ pub const Response = struct {
     pub fn forbidden(s: []u8) Response {
         return Response{ .status = stat.Status.FORBIDDEN, .body = s };
     }
-
+    /// Represents the Response Cookie.
     pub const Cookie = rescookie.Cookie;
 };
 
