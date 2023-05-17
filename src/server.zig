@@ -51,7 +51,10 @@ pub const Server = struct {
                         // Detect Content-Length for assigning the body
                         const end_index = try std.fmt.parseUnsigned(u8, req.header("Content-Length").?, 0);
                         req.body = buffer.items[header_index + 4 .. @as(usize, end_index + 1)];
-                    } else break;
+                    } else {
+                        req.body = "";
+                        break;
+                    }
                 }
             }
             defer allocator.free(req.headers);

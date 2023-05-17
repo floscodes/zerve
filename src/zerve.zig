@@ -16,18 +16,28 @@ test "Test zerve test-app, run server and serve test page" {
     const rt = [_]types.Route{.{ "/", handlefn }};
     try Server.listen("0.0.0.0", 8080, &rt, std.testing.allocator);
 }
-// Function for test "Run Server"
+// Function for test
 fn handlefn(req: *types.Request) types.Response {
-    // print headers of Request
-    std.debug.print("\nSent headers:\n", .{});
+    const alloc = std.testing.allocator;
+    // collect headers of Request
+    var headers = std.ArrayList(u8).init(alloc);
+    defer headers.deinit();
     for (req.headers) |header| {
-        std.debug.print("{s}: {s}", .{ header.key, header.value });
+        headers.appendSlice(header.key) catch {};
+        headers.appendSlice(": ") catch {};
+        headers.appendSlice(header.value) catch {};
+        headers.appendSlice("\n") catch {};
     }
-    // print cookies of Request
-    std.debug.print("\nSent cookies:\n", .{});
+    // collect cookies of Request
+    var cookies = std.ArrayList(u8).init(alloc);
+    defer cookies.deinit();
     for (req.cookies) |cookie| {
-        std.debug.print("{s}={s}\n", .{ cookie.name, cookie.value });
+        cookies.appendSlice(cookie.name) catch {};
+        cookies.appendSlice(" = ") catch {};
+        cookies.appendSlice(cookie.value) catch {};
+        cookies.appendSlice("\n") catch {};
     }
-    var res = types.Response{ .body = "<h1>Run Server Test OK!</h1>", .cookies = &[_]Response.Cookie{.{ .name = "Test-Cookie", .value = "Test", .maxAge = 60 * 60 * 5 }} };
+    const res_string = std.fmt.allocPrint(alloc, "<h1>Run Server Test OK!</h1><br><h3>Sent headers:</h3><br><pre><code>{s}</code></pre><br><h3>Sent Cookies:</h3><br><pre><code>{s}</code></pre><br><h3>Request body:</h3><br>{s}", .{ headers.items, cookies.items, req.body }) catch "Memory error";
+    var res = types.Response{ .body = res_string, .cookies = &[_]Response.Cookie{.{ .name = "Test-Cookie", .value = "Test", .maxAge = 60 * 60 * 5 }} };
     return res;
 }
