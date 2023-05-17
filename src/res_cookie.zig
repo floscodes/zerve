@@ -17,7 +17,7 @@ pub const Cookie = struct {
         defer allocator.free(domain);
         const secure = if (self.secure) "Secure; " else "";
         const httpOnly = if (self.httpOnly) "HttpOnly; " else "";
-        return try std.fmt.allocPrint(allocator, "Set-Cookie: {s}={s}; Path={s}; {s}Max-Age={}; {s}{s}{s}\n", .{ self.name, self.value, self.path, domain, self.maxAge, secure, httpOnly, getSameSite(&self) });
+        return try std.fmt.allocPrint(allocator, "Set-Cookie: {s}={s}; Path={s}; {s}Max-Age={}; {s}{s}{s}", .{ self.name, self.value, self.path, domain, self.maxAge, secure, httpOnly, getSameSite(&self) });
     }
 };
 

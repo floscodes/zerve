@@ -38,12 +38,13 @@ pub const Server = struct {
 
             var chunk_buf: [4096]u8 = undefined;
             // Collect max 4096 bytes of data from the stream into the chunk_buf. Then add it
-            // to the ArrayList. Repeat this until request stream ends by counting the appearence
-            // of "\r\n"
+            // to the ArrayList. Repeat this until request stream ends by detecting either
+            // appearance of "\r\n\r\n" or until content length is reached.
             while (true) {
                 _ = try conn.stream.read(chunk_buf[0..]);
                 try buffer.appendSlice(chunk_buf[0..]);
-                if (std.mem.containsAtLeast(u8, buffer.items, 2, "\r\n")) break;
+                if (std.mem.indexOf(u8, buffer.items, "\r\n\r\n")) |_| break;
+                // TODO: Detect Content Length in case of existing request body
             }
             // Build the Request
             const req_stream = if (olderVersion) buffer.toOwnedSlice() else try buffer.toOwnedSlice();
@@ -86,9 +87,9 @@ pub const Server = struct {
 fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.Allocator) !Request {
     var req: Request = undefined;
     req.ip = client_ip;
-    var parts = std.mem.split(u8, bytes, "\r\n");
+    var parts = std.mem.split(u8, bytes, "\r\n\r\n");
     const header = parts.first();
-    var header_lines = std.mem.split(u8, header, "\n");
+    var header_lines = std.mem.split(u8, header, "\r\n");
     var header_buffer = std.ArrayList(Header).init(allocator);
     var cookie_buffer = std.ArrayList(Request.Cookie).init(allocator);
 
@@ -103,7 +104,7 @@ fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.All
     }
 
     while (header_lines.next()) |line| {
-        var headers = std.mem.split(u8, line, ": ");
+        var headers = std.mem.split(u8, line, ":");
         const item1 = headers.first();
         // Check if header is a cookie and parse it
         if (eql(u8, item1, "Cookie") or eql(u8, item1, "cookie")) {
@@ -113,7 +114,7 @@ fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.All
             try cookie_buffer.appendSlice(cookies);
             continue;
         }
-        const item2 = if (headers.next()) |value| value else "";
+        const item2 = if (headers.next()) |value| std.mem.trim(u8, value, " ") else "";
         const header_pair = Header{ .key = item1, .value = item2 };
         try header_buffer.append(header_pair);
     }
@@ -125,19 +126,26 @@ fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.All
 
 // Test the Request build function
 test "build a Request" {
-    const bytes = "GET /test HTTP/1.1\nHost: localhost:8080\nUser-Agent: Testbot\r\nThis is the test body!";
     const allocator = std.testing.allocator;
+    // Init an ArrayList to simulate Request stream that's size is not known at compile time
+    var stream = std.ArrayList(u8).init(allocator);
+    try stream.appendSlice("GET /test HTTP/1.1\r\nHost: localhost\r\nUser-Agent: Testbot\r\nCookie: Test-Cookie=Test\r\n\r\nThis is the test body!");
+    const bytes = if (olderVersion) stream.toOwnedSlice() else try stream.toOwnedSlice();
+    defer allocator.free(bytes);
     const client_ip = "127.0.0.1";
     const req = try buildRequest(client_ip, bytes, allocator);
     defer allocator.free(req.headers);
+    defer allocator.free(req.cookies);
     try std.testing.expect(req.method == Method.GET);
     try std.testing.expect(req.httpVersion == HTTP_Version.HTTP1_1);
     try std.testing.expect(std.mem.eql(u8, req.uri, "/test"));
     try std.testing.expect(std.mem.eql(u8, req.headers[1].key, "User-Agent"));
     try std.testing.expect(std.mem.eql(u8, req.headers[1].value, "Testbot"));
     try std.testing.expect(std.mem.eql(u8, req.headers[0].key, "Host"));
-    try std.testing.expect(std.mem.eql(u8, req.headers[0].value, "localhost:8080"));
+    try std.testing.expect(std.mem.eql(u8, req.headers[0].value, "localhost"));
     try std.testing.expect(std.mem.eql(u8, req.body, "This is the test body!"));
+    try std.testing.expect(std.mem.eql(u8, req.cookies[0].name, "Test-Cookie"));
+    try std.testing.expect(std.mem.eql(u8, req.cookies[0].value, "Test"));
 }
 
 // Function that turns Response into a string
@@ -152,15 +160,18 @@ fn stringifyResponse(r: Response, allocator: std.mem.Allocator) ![]const u8 {
         try res.appendSlice(header.key);
         try res.appendSlice(": ");
         try res.appendSlice(header.value);
-        try res.appendSlice("\n");
+        try res.appendSlice("\r\n");
     }
     // Add cookie-headers
     for (r.cookies) |cookie| {
         const c = try cookie.stringify(allocator);
         defer allocator.free(c);
-        if (!eql(u8, cookie.name, "") and !eql(u8, cookie.value, "")) try res.appendSlice(c);
+        if (!eql(u8, cookie.name, "") and !eql(u8, cookie.value, "")) {
+            try res.appendSlice(c);
+            try res.appendSlice("\r\n");
+        }
     }
-    try res.appendSlice("\r\n\r\n");
+    try res.appendSlice("\r\n");
     try res.appendSlice(r.body);
 
     return if (olderVersion) res.toOwnedSlice() else try res.toOwnedSlice();
