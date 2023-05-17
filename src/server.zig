@@ -37,22 +37,22 @@ pub const Server = struct {
             defer buffer.deinit();
 
             var chunk_buf: [4096]u8 = undefined;
+            var req: Request = undefined;
+            req.ip = client_ip;
             // Collect max 4096 bytes of data from the stream into the chunk_buf. Then add it
             // to the ArrayList. Repeat this until request stream ends by detecting either
             // appearance of "\r\n\r\n" or until content length is reached.
             while (true) {
                 _ = try conn.stream.read(chunk_buf[0..]);
                 try buffer.appendSlice(chunk_buf[0..]);
-                if (std.mem.indexOf(u8, buffer.items, "\r\n\r\n")) |_| {
+                if (std.mem.indexOf(u8, buffer.items, "\r\n\r\n")) |header_index| {
+                    try buildRequestHeadersAndCookies(&req, buffer.items[0..header_index], allocator);
                     if (std.mem.indexOf(u8, buffer.items, "Content-Length:")) |_| {
-                        // TODO: Detect Content-Length
+                        // TODO: detect Content-Length!
+                        req.body = buffer.items[header_index + 4 .. 56];
                     } else break;
                 }
             }
-            // Build the Request
-            const req_stream = if (olderVersion) buffer.toOwnedSlice() else try buffer.toOwnedSlice();
-            defer allocator.free(req_stream);
-            var req = try buildRequest(client_ip, req_stream, allocator);
             defer allocator.free(req.headers);
             defer allocator.free(req.cookies);
 
@@ -86,13 +86,9 @@ pub const Server = struct {
     }
 };
 
-// Function that build the request from stream
-fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.Allocator) !Request {
-    var req: Request = undefined;
-    req.ip = client_ip;
-    var parts = std.mem.split(u8, bytes, "\r\n\r\n");
-    const header = parts.first();
-    var header_lines = std.mem.split(u8, header, "\r\n");
+// Function that build the Request headers and cookies from stream
+fn buildRequestHeadersAndCookies(req: *Request, bytes: []const u8, allocator: std.mem.Allocator) !void {
+    var header_lines = std.mem.split(u8, bytes, "\r\n");
     var header_buffer = std.ArrayList(Header).init(allocator);
     var cookie_buffer = std.ArrayList(Request.Cookie).init(allocator);
 
@@ -121,22 +117,23 @@ fn buildRequest(client_ip: []const u8, bytes: []const u8, allocator: std.mem.All
         const header_pair = Header{ .key = item1, .value = item2 };
         try header_buffer.append(header_pair);
     }
+
     req.cookies = if (olderVersion) cookie_buffer.toOwnedSlice() else try cookie_buffer.toOwnedSlice();
     req.headers = if (olderVersion) header_buffer.toOwnedSlice() else try header_buffer.toOwnedSlice();
-    req.body = if (parts.next()) |value| value else "";
-    return req;
 }
 
 // Test the Request build function
 test "build a Request" {
     const allocator = std.testing.allocator;
-    // Init an ArrayList to simulate Request stream that's size is not known at compile time
-    var stream = std.ArrayList(u8).init(allocator);
-    try stream.appendSlice("GET /test HTTP/1.1\r\nHost: localhost\r\nUser-Agent: Testbot\r\nCookie: Test-Cookie=Test\r\n\r\nThis is the test body!");
-    const bytes = if (olderVersion) stream.toOwnedSlice() else try stream.toOwnedSlice();
-    defer allocator.free(bytes);
+    const stream = "GET /test HTTP/1.1\r\nHost: localhost\r\nUser-Agent: Testbot\r\nCookie: Test-Cookie=Test\r\n\r\nThis is the test body!";
+    var parts = std.mem.split(u8, stream, "\r\n\r\n");
     const client_ip = "127.0.0.1";
-    const req = try buildRequest(client_ip, bytes, allocator);
+    const headers = parts.first();
+    const body = parts.next().?;
+    var req: Request = undefined;
+    req.body = body;
+    req.ip = client_ip;
+    try buildRequestHeadersAndCookies(&req, headers, allocator);
     defer allocator.free(req.headers);
     defer allocator.free(req.cookies);
     try std.testing.expect(req.method == Method.GET);
@@ -186,5 +183,5 @@ test "stringify Response" {
     const res = Response{ .headers = &headers, .body = "This is the body!" };
     const res_str = try stringifyResponse(res, allocator);
     defer allocator.free(res_str);
-    try std.testing.expect(eql(u8, res_str, "HTTP/1.1 200 OK\r\nUser-Agent: Testbot\n\r\n\r\nThis is the body!"));
+    try std.testing.expect(eql(u8, res_str, "HTTP/1.1 200 OK\r\nUser-Agent: Testbot\r\n\r\nThis is the body!"));
 }
