@@ -97,8 +97,24 @@ pub const Request = struct {
     uri: []const u8,
     /// Represents the request body sent by the client
     body: []const u8,
-    /// Represents the sent cookies
+    /// Represents a Request Cookie
     pub const Cookie = reqcookie.Cookie;
+
+    /// Get Request Cookie value by Cookie name
+    pub fn cookie(self: *Request, name: []const u8) ?[]const u8 {
+        for (self.*.cookies) |c| {
+            if (eql(u8, name, c.name)) return c.value;
+        }
+        return null;
+    }
+
+    /// Get Header value by Header key
+    pub fn header(self: *Request, key: []const u8) ?[]const u8 {
+        for (self.*.headers) |h| {
+            if (eql(u8, key, h.key)) return h.value;
+        }
+        return null;
+    }
 };
 
 /// Represents a standard http-Response sent by the webapp (server).
