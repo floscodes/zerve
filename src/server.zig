@@ -43,8 +43,11 @@ pub const Server = struct {
             while (true) {
                 _ = try conn.stream.read(chunk_buf[0..]);
                 try buffer.appendSlice(chunk_buf[0..]);
-                if (std.mem.indexOf(u8, buffer.items, "\r\n\r\n")) |_| break;
-                // TODO: Detect Content Length in case of existing request body
+                if (std.mem.indexOf(u8, buffer.items, "\r\n\r\n")) |_| {
+                    if (std.mem.indexOf(u8, buffer.items, "Content-Length:")) |_| {
+                        // TODO: Detect Content-Length
+                    } else break;
+                }
             }
             // Build the Request
             const req_stream = if (olderVersion) buffer.toOwnedSlice() else try buffer.toOwnedSlice();
