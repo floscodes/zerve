@@ -48,8 +48,9 @@ pub const Server = struct {
                 if (std.mem.indexOf(u8, buffer.items, "\r\n\r\n")) |header_index| {
                     try buildRequestHeadersAndCookies(&req, buffer.items[0..header_index], allocator);
                     if (std.mem.indexOf(u8, buffer.items, "Content-Length:")) |_| {
-                        // TODO: detect Content-Length!
-                        req.body = buffer.items[header_index + 4 .. 56];
+                        // Detect Content-Length for assigning the body
+                        const end_index = try std.fmt.parseUnsigned(u8, req.header("Content-Length").?, 0);
+                        req.body = buffer.items[header_index + 4 .. @as(usize, end_index + 1)];
                     } else break;
                 }
             }
