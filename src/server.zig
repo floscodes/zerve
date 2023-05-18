@@ -58,9 +58,9 @@ pub const Server = struct {
             defer allocator.free(req.cookies);
 
             // Check if there could be something in the request body, if so, read it.
-            // If the request method is GET, no body is sent and body will be empty.
+            // If the request method is a method with no request body, no body will be accepted.
             // Otherwise body will be read until the end.
-            if (req.method != .GET) {
+            if (req.method != .GET and req.method != .CONNECT and req.method != .HEAD and req.method != .OPTIONS and req.method != .TRACE) {
                 if (req.header("Content-Length")) |index| {
                     const end_index = try std.fmt.parseUnsigned(u8, index, 0);
                     while (true) {
