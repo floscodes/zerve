@@ -38,6 +38,6 @@ fn handlefn(req: *types.Request) types.Response {
         cookies.appendSlice("\n") catch {};
     }
     const res_string = std.fmt.allocPrint(alloc, "<h1>Run Server Test OK!</h1><br><h3>Sent headers:</h3><br><pre><code>{s}</code></pre><br><h3>Sent Cookies:</h3><br><pre><code>{s}</code></pre><br><h3>Request body:</h3><br>{s}", .{ headers.items, cookies.items, req.body }) catch "Memory error";
-    var res = types.Response{ .body = res_string, .cookies = &[_]Response.Cookie{.{ .name = "Test-Cookie", .value = "Test", .maxAge = 60 * 60 * 5 }} };
+    var res = types.Response{ .body = res_string, .cookies = &[_]Response.Cookie{.{ .name = "Test-Cookie", .value = "Test", .maxAge = 60 * 3 }} };
     return res;
 }
