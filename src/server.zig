@@ -60,7 +60,7 @@ pub const Server = struct {
                         header_string = buffer.items[0..header_end];
                         try buildRequestHeadersAndCookies(&req, header_string, allocator);
                         // Checking Request method and if it is one that can send a body.
-                        // If not, exit the loop.
+                        // If it is one that must not have a body, exit the loop.
                         if (req.method == .GET or req.method == .CONNECT or req.method == .HEAD or req.method == .OPTIONS or req.method == .TRACE) break;
 
                         // If Request has a method that can contain a body, check if Content-Length Header is set.
