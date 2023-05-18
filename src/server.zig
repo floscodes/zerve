@@ -33,48 +33,52 @@ pub const Server = struct {
             const client_ip = try std.fmt.allocPrint(allocator, "{}", .{conn.address});
             defer allocator.free(client_ip);
 
-            var header_buffer = std.ArrayList(u8).init(allocator);
-            defer header_buffer.deinit();
+            var buffer = std.ArrayList(u8).init(allocator);
+            defer buffer.deinit();
 
-            var body_buffer = std.ArrayList(u8).init(allocator);
-            defer body_buffer.deinit();
-
-            var chunk_buf: [4096]u8 = undefined;
+            var byte: [1]u8 = undefined;
             var req: Request = undefined;
             req.ip = client_ip;
-            // Collect max 4096 bytes of data from the stream into the chunk_buf. Then add it
+            req.body = "";
+            // Collect bytes of data from the stream. Then add it
             // to the ArrayList. Repeat this until all headers of th request end by detecting
-            // appearance of "\r\n\r\n".
+            // appearance of "\r\n\r\n". Then read body if one is sent and if required headers exist and
+            // method is chosen by the client.
+            var headers_finished = false;
+            var content_length: usize = 0;
+            var header_end: usize = 0;
+            var header_string: []const u8 = undefined;
             while (true) {
-                _ = try conn.stream.read(chunk_buf[0..]);
-                try header_buffer.appendSlice(chunk_buf[0..]);
-                if (std.mem.indexOf(u8, header_buffer.items, "\r\n\r\n")) |_| break;
-            }
-            // Build headers and cookies of request.
-            const header_string = if (olderVersion) header_buffer.toOwnedSlice() else try header_buffer.toOwnedSlice();
-            defer allocator.free(header_string);
-            try buildRequestHeadersAndCookies(&req, header_string, allocator);
-            defer allocator.free(req.headers);
-            defer allocator.free(req.cookies);
+                // Read Request stream
+                _ = try conn.stream.read(&byte);
+                try buffer.appendSlice(&byte);
+                //check if header is finished
+                if (!headers_finished) {
+                    if (std.mem.indexOf(u8, buffer.items, "\r\n\r\n")) |header_end_index| {
+                        headers_finished = true;
+                        header_end = header_end_index;
+                        header_string = buffer.items[0..header_end];
+                        try buildRequestHeadersAndCookies(&req, header_string, allocator);
+                        // Checking Request method and if it is one that can send a body.
+                        // If not, exit the loop.
+                        if (req.method == .GET or req.method == .CONNECT or req.method == .HEAD or req.method == .OPTIONS or req.method == .TRACE) break;
 
-            // Check if there could be something in the request body, if so, read it.
-            // If the request method is a method with no request body, no body will be accepted.
-            // Otherwise body will be read until the end.
-            if (req.method != .GET and req.method != .CONNECT and req.method != .HEAD and req.method != .OPTIONS and req.method != .TRACE) {
-                if (req.header("Content-Length")) |index| {
-                    const end_index = try std.fmt.parseUnsigned(u8, index, 0);
-                    while (true) {
-                        _ = try conn.stream.read(chunk_buf[0..]);
-                        try body_buffer.appendSlice(chunk_buf[0..]);
-                        if (body_buffer.items.len == @as(usize, end_index + 4)) {
-                            req.body = if (olderVersion) body_buffer.toOwnedSlice() else try body_buffer.toOwnedSlice();
-                            break;
-                        }
+                        // If Request has a method that can contain a body, check if Content-Length Header is set.
+                        // If not, exit loop. A Request body would not be accepted.
+                        if (req.header("Content-Length")) |length| {
+                            content_length = try std.fmt.parseUnsigned(u8, length, 0);
+                        } else break;
+                    }
+                } else {
+                    // read body. Check length and add 4 because this is the length of "\r\n\r\n"
+                    if (buffer.items.len - header_end >= content_length + 4) {
+                        req.body = buffer.items[header_end .. header_end + content_length + 4];
+                        break;
                     }
                 }
-            } else req.body = "";
-
-            defer allocator.free(req.body);
+            }
+            defer allocator.free(req.headers);
+            defer allocator.free(req.cookies);
 
             // PREPARE FOR BUILDING THE RESPONSE
             // if there ist a path set in the uri trim the trailing slash in order to accept it later during the matching check.
