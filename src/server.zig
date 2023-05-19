@@ -64,8 +64,9 @@ pub const Server = struct {
                         // If it is one that must not have a body, exit the loop.
                         if (req.method == .GET or req.method == .CONNECT or req.method == .HEAD or req.method == .OPTIONS or req.method == .TRACE) break;
 
-                        // If Request has a method that can contain a body, check if Content-Length Header is set.
-                        // If not, exit loop. A Request body would not be accepted.
+                        // If Request has a method that can contain a body, check if Content-Length Header or `Transfer-Encoding: chunked` is set.
+                        // `Content-Length` will always be preferred over `Transfer-Encoding`.
+                        // If none og these headers is set, exit loop. A Request body will not be accepted.
                         if (req.header("Content-Length")) |length| {
                             content_length = try std.fmt.parseUnsigned(u8, length, 0);
                         } else if (req.header("Transfer-Encoding")) |value| {
@@ -73,6 +74,8 @@ pub const Server = struct {
                         } else break;
                     }
                 } else {
+                    // check how the request body should be read, depending on the relevant header set in the request.
+                    // `Content-Length` will always be preferred over `Transfer-Encoding`.
                     if (!transfer_encoding_chunked) {
                         // read body. Check length and add 4 because this is the length of "\r\n\r\n"
                         if (buffer.items.len - header_end >= content_length + 4) {
@@ -80,6 +83,7 @@ pub const Server = struct {
                             break;
                         }
                     } else {
+                        // read body until end sequence of chunked encoding is detected at the end of the stream
                         if (std.mem.endsWith(u8, buffer.items, "0\r\n\r\n")) {
                             req.body = buffer.items;
                             break;
