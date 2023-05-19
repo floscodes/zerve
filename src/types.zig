@@ -115,6 +115,60 @@ pub const Request = struct {
         }
         return null;
     }
+
+    /// Get query value by query key
+    pub fn getQuery(self: *Request, key_needle: []const u8) ?[]const u8 {
+        var query_string: ?[]const u8 = null;
+        if (self.method == .GET) {
+            var parts = std.mem.split(u8, self.uri, "?");
+            _ = parts.first();
+            query_string = parts.next();
+        }
+        if (self.method == .POST) {
+            query_string = self.body;
+        }
+        if (query_string == null) return null;
+        var pairs = std.mem.split(u8, query_string.?, "&");
+        var first_pair = pairs.first();
+        var items = std.mem.split(u8, first_pair, "=");
+        var key = items.first();
+        if (eql(u8, key_needle, key)) {
+            if (items.next()) |value| return value;
+        }
+        while (pairs.next()) |pair| {
+            items = std.mem.split(u8, pair, "=");
+            key = items.first();
+            if (eql(u8, key_needle, key)) {
+                if (items.next()) |value| return value;
+            }
+        }
+        return null;
+    }
+
+    test "get Query" {
+        var req: Request = undefined;
+        req.uri = "/about/?user=james&password=1234"; // Write query string in uri after '?'
+        req.method = .GET;
+        var user = if (req.getQuery("user")) |v| v else "";
+        var pwd = if (req.getQuery("password")) |v| v else "";
+        var n = req.getQuery("nothing"); // This key does not exist in query string
+
+        try std.testing.expect(eql(u8, user, "james"));
+        try std.testing.expect(eql(u8, pwd, "1234"));
+        try std.testing.expect(n == null);
+
+        // Change method an write query string into body
+        req.body = "user=james&password=1234";
+        req.method = .POST;
+
+        user = if (req.getQuery("user")) |v| v else "";
+        pwd = if (req.getQuery("password")) |v| v else "";
+        n = req.getQuery("nothing"); // This key does not exist in query string
+
+        try std.testing.expect(eql(u8, user, "james"));
+        try std.testing.expect(eql(u8, pwd, "1234"));
+        try std.testing.expect(n == null);
+    }
 };
 
 /// Represents a standard http-Response sent by the webapp (server).
