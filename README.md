@@ -148,6 +148,7 @@ It returns an optional and fetches the value of a `Request.Cookie`.
 Get Request Cookie value by key:
 ```zig
 fn index(req: *zrv.Request) zrv.Response {
+    
     // Fetches the cookie value by cookie name.
     // The `cookie` method will return an optional and will be `null`
     // in case that the cookie does not exist.
