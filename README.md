@@ -9,12 +9,14 @@ A simple framework for writing web services in zig.
     * [Response](#response)
     * [Header](#header)
     * [Cookies](#cookies)
+        * [Read Cookie from Request](#read-cookie-from-request)
+        * [Add Cookie to Response](#add-cookie-to-response)
     * [Method](#method)
     * [HTTP-Version](#http-version)
  * [Namespaces](#namespaces)
      * [Server](#server)
 
-## Create a simple web app
+# Create a simple web app
 
 ```zig
 const zrv = @import("zerve"); // Or set the path to zerve.zig e.g. @import("zerve-main/src/zerve.zig");
@@ -49,9 +51,9 @@ pub fn main() !void {
 }
 ```
 
-## Types
+# Types
 
-### Route
+## Route
 
 To write a web service with **zerve** you have to configure one or more Routes. They are being set by creating an Array of `Route`.
 
@@ -65,7 +67,7 @@ you have do declare it as an Array as well:
 const rt = [_]Route{.{"/hello", helloFunction}};
 ```
 
-### Handler Functions
+## Handler Functions
 
 Every Request is handled by a handler function. It has to be of this type: `fn(req: *Request) Response`
 
@@ -77,9 +79,9 @@ fn hello(req: *Request) Response {
 }
 ```
 
-### Request
+## Request
 
-This is the Request sent by the client.
+This represents the Request sent by the client.
 ```zig
 pub const Request = struct {
     /// The Request Method, e.g. "GET"
@@ -95,7 +97,27 @@ pub const Request = struct {
 };
 ```
 
-### Response
+### Get Query Params
+
+**zerve** lets you easily extract query params no matter if `Request`method is `Get`or `POST`.
+
+This can be done by using the `getQuery` method of `Request`.
+
+Example:
+```zig
+fn index(req: zrv.Request) zrv.Response {
+
+    // Assuming that a query string has been sent by the client containing the requested param,
+    // e.g. `?user=james`
+
+    const user = req.getQuery("user"); // This will return an optional
+    
+    if (user == null) return Response.write("") else return Response.write(user);
+    
+}
+```
+
+## Response
 
 A Response that is sent ny the server. Every handler function has to return a `Response`.
 ```zig
@@ -130,7 +152,7 @@ pub const Response = struct {
 };
 ```
 
-### Header
+## Header
 
 Every Request or Response has Headers represented by an Array of Headers. Every Header has a key and a value.
 ```zig
@@ -140,7 +162,9 @@ pub const Header = struct {
 };
 ```
 
-### Cookies
+## Cookies
+
+### Read Cookie from Request
 
 To read the Cookie of a request by key, `Request` has a `cookie`-method.
 It returns an optional and fetches the value of a `Request.Cookie`.
@@ -158,6 +182,8 @@ fn index(req: *zrv.Request) zrv.Response {
     return zrv.Response.write("cookie-test");
 }
 ```
+
+### Add Cookie to Response
 
 To send a cookie in your `Response` just add a `Response.Cookie` to the `cookies` field.
 The `cookies` field is a slice of `Response.Cookie`.
@@ -192,7 +218,7 @@ This are the fields of `Response.Cookie`:
     sameSite: SameSite = .lax,
 ```
 
-### Method
+## Method
 
 Represents the http method of a Request or a Response.
 ```zig
@@ -213,7 +239,7 @@ pub const Method = enum {
 };
 ```
 
-### HTTP-Version
+## HTTP-Version
 
 The HTTP-Version of a Request or a Response.
 ```zig
@@ -230,9 +256,9 @@ pub const HTTP_Version = enum {
 };
 ```
 
-## Namespaces
+# Namespaces
 
-### Server
+## Server
 
 Server is a namespace to configure IP and Port the app will listen to by calling `Server.listen()`, as well as the routing paths (`[]Route`) it shall handle.
 You can also choose an allocator that the app will use for dynamic memory allocation.
