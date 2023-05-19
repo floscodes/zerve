@@ -97,6 +97,9 @@ pub const Server = struct {
             // PREPARE FOR BUILDING THE RESPONSE
             // if there ist a path set in the uri trim the trailing slash in order to accept it later during the matching check.
             if (req.uri.len > 1) req.uri = std.mem.trimRight(u8, req.uri, "/");
+            // Declare new URI variable and cut off a possible request string in order to accept it in a GET Request
+            var uri_parts = std.mem.split(u8, req.uri, "?");
+            const uri_string = uri_parts.first();
 
             // BUILDING THE RESPONSE
             // First initialize a notfound Response that is being changed if a Route path matches with Request URI.
@@ -108,7 +111,7 @@ pub const Server = struct {
                 // Trim a possible trailing slash from Route path in order to accept it during the matching process.
                 if (req_path.len > 1) req_path = std.mem.trimRight(u8, req_path, "/");
                 // Check if there is a match
-                if (eql(u8, req_path, req.uri)) {
+                if (eql(u8, req_path, uri_string)) {
                     // Change response with handling function in case of match.
                     res = r[1](&req);
                     // Exit loop in case of match
@@ -119,6 +122,7 @@ pub const Server = struct {
             const response_string = try stringifyResponse(res, allocator);
             // Free memory after writing Response and sending it to client.
             defer allocator.free(response_string);
+            // SENDING THE RESPONSE
             // Write stringified Response and send it to client.
             _ = try conn.stream.write(response_string);
         }
