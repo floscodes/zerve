@@ -8,6 +8,7 @@ A simple framework for writing web services in zig.
     * [Request](#request)
     * [Response](#response)
     * [Header](#header)
+    * [Cookies](#cookies)
     * [Method](#method)
     * [HTTP-Version](#http-version)
  * [Namespaces](#namespaces)
@@ -108,7 +109,7 @@ pub const Response = struct {
     body: []const u8 = "",
 
     /// Write a simple response.
-    pub fn new(s: []const u8) Response {
+    pub fn write(s: []const u8) Response {
         return Response{ .body = s };
     }
 
@@ -137,6 +138,57 @@ pub const Header = struct {
     key: []const u8,
     value: []const u8,
 };
+```
+
+### Cookies
+
+To read the Cookie of a request by key, `Request` has a `cookie`-method.
+It returns an optional and fetches the value of a `Request.Cookie`.
+
+Get Request Cookie value by key:
+```zig
+fn index(req: *zrv.Request) zrv.Response {
+    // Fetches the cookie value by cookie name.
+    // The `cookie` method will return an optional and will be `null`
+    // in case that the cookie does not exist.
+
+    const cookie = if (req.cookie("password")) |password| password else "";
+
+    return zrv.Response.write("cookie-test");
+}
+```
+
+To send a cookie in your `Response` just add a `Response.Cookie` to the `cookies` field.
+The `cookies` field is a slice of `Response.Cookie`.
+
+```zig
+fn index(_: *zrv.Request) zrv.Response {
+
+    // Define a cookie with name and value.
+    // It will live for 24 hours, since `maxAge` represents
+    // lifetime in seconds.
+    // See all field of the `Response.Cookie` struct below.
+
+    const cookie = zrv.Response.Cookie{.name="User", .value="James", .maxAge=60*60*24};
+
+    var res = zrv.Response.write("Set Cookie!");
+    // add cookie to the `cookies` field which is a slice of `Response.Cookie`
+    res.cookies = &[_]zrv.Response.Cookie{.{cookie}};
+}
+```
+
+This are the fields of `Response.Cookie`:
+
+```zig
+    name: []const u8,
+    value: []const u8,
+    path: []const u8 = "/",
+    domain: []const u8 = "",
+    /// Indicates the number of seconds until the cookie expires.
+    maxAge: i64 = 0,
+    secure: bool = true,
+    httpOnly: bool = true,
+    sameSite: SameSite = .lax,
 ```
 
 ### Method
