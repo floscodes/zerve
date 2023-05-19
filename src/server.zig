@@ -46,6 +46,7 @@ pub const Server = struct {
             // method is chosen by the client.
             var headers_finished = false;
             var content_length: usize = 0;
+            var transfer_encoding_chunked = false;
             var header_end: usize = 0;
             var header_string: []const u8 = undefined;
             while (true) {
@@ -67,13 +68,22 @@ pub const Server = struct {
                         // If not, exit loop. A Request body would not be accepted.
                         if (req.header("Content-Length")) |length| {
                             content_length = try std.fmt.parseUnsigned(u8, length, 0);
+                        } else if (req.header("Transfer-Encoding")) |value| {
+                            if (!eql(u8, value, "chunked")) break else transfer_encoding_chunked = true;
                         } else break;
                     }
                 } else {
-                    // read body. Check length and add 4 because this is the length of "\r\n\r\n"
-                    if (buffer.items.len - header_end >= content_length + 4) {
-                        req.body = buffer.items[header_end .. header_end + content_length + 4];
-                        break;
+                    if (!transfer_encoding_chunked) {
+                        // read body. Check length and add 4 because this is the length of "\r\n\r\n"
+                        if (buffer.items.len - header_end >= content_length + 4) {
+                            req.body = buffer.items[header_end .. header_end + content_length + 4];
+                            break;
+                        }
+                    } else {
+                        if (std.mem.endsWith(u8, buffer.items, "0\r\n\r\n")) {
+                            req.body = buffer.items;
+                            break;
+                        }
                     }
                 }
             }
