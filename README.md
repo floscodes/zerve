@@ -1,4 +1,5 @@
 # zerve
+
 A simple framework for writing web services in zig.
 
 * [Create a simple Web App](#create-a-simple-web-app)
@@ -112,8 +113,26 @@ fn index(req: zrv.Request) zrv.Response {
 
     const user = req.getQuery("user"); // This will return an optional
     
-    if (user == null) return Response.write("") else return Response.write(user);
+    if (user == null) return Response.write("") else return Response.write(user.?);
     
+}
+```
+
+### Get value of Request header by key
+
+You can get the header value of any sent header by the client with the `header`method of `Request`.
+
+Example:
+
+```zig
+fn index(req: *zrv.Request) zrv.Response {
+    
+    // Get value of the 'Content-Type' header
+
+    const h = req.header("Content-Type"); // This will return an optional
+
+    if (h == null) return Response.write("Header not found!") else return Response.write(h.?);
+
 }
 ```
 
