@@ -7,6 +7,8 @@ A simple framework for writing web services in zig.
     * [Route](#route)
     * [Handler Functions](#handler-functions)
     * [Request](#request)
+        * [Get Query Params](#get-query-params)
+        * [Get Header Value by Key](#get-value-of-request-header-by-key)
     * [Response](#response)
     * [Header](#header)
     * [Cookies](#cookies)
