@@ -102,13 +102,13 @@ pub const Request = struct {
 
 ### Get Query Params
 
-**zerve** lets you easily extract query params no matter if `Request`method is `Get`or `POST`.
+**zerve** lets you easily extract query params no matter if `Request`method is `GET`or `POST`.
 
 This can be done by using the `getQuery` method of `Request`.
 
 Example:
 ```zig
-fn index(req: zrv.Request) zrv.Response {
+fn index(req: Request) Response {
 
     // Assuming that a query string has been sent by the client containing the requested param,
     // e.g. `?user=james`
@@ -127,7 +127,7 @@ You can get the header value of any sent header by the client with the `header`m
 Example:
 
 ```zig
-fn index(req: *zrv.Request) zrv.Response {
+fn index(req: *Request) Response {
     
     // Get value of the 'Content-Type' header
 
@@ -152,24 +152,16 @@ pub const Response = struct {
     body: []const u8 = "",
 
     /// Write a simple response.
-    pub fn write(s: []const u8) Response {
-        return Response{ .body = s };
-    }
+    pub fn write(s: []const u8) Response
 
     /// Send a response with json content.
-    pub fn json(j: []const u8) Response {
-        return Response{ .headers = &[_]Header{.{ .key = "Content-Type", .value = "application/json" }}, .body = j };
-    }
+    pub fn json(j: []const u8) Response
 
     /// Send a response with status not found.
-    pub fn notfound(s: []const u8) Response {
-        return Response{ .status = stat.Status.NOT_FOUND, .body = s };
-    }
+    pub fn notfound(s: []const u8) Response
 
     /// Send a response with status forbidden.
-    pub fn forbidden(s: []u8) Response {
-        return Response{ .status = stat.Status.FORBIDDEN, .body = s };
-    }
+    pub fn forbidden(s: []u8) Response
 };
 ```
 
@@ -192,7 +184,7 @@ It returns an optional and fetches the value of a `Request.Cookie`.
 
 Get Request Cookie value by key:
 ```zig
-fn index(req: *zrv.Request) zrv.Response {
+fn index(req: *Request) Response {
     
     // Fetches the cookie value by cookie name.
     // The `cookie` method will return an optional and will be `null`
@@ -200,7 +192,7 @@ fn index(req: *zrv.Request) zrv.Response {
 
     const cookie = if (req.cookie("password")) |password| password else "";
 
-    return zrv.Response.write("cookie-test");
+    return Response.write("cookie-test");
 }
 ```
 
@@ -210,18 +202,20 @@ To send a cookie in your `Response` just add a `Response.Cookie` to the `cookies
 The `cookies` field is a slice of `Response.Cookie`.
 
 ```zig
-fn index(_: *zrv.Request) zrv.Response {
+fn index(_: *Request) Response {
 
     // Define a cookie with name and value.
     // It will live for 24 hours, since `maxAge` represents
     // lifetime in seconds.
     // See all field of the `Response.Cookie` struct below.
 
-    const cookie = zrv.Response.Cookie{.name="User", .value="James", .maxAge=60*60*24};
+    const cookie = Response.Cookie{.name="User", .value="James", .maxAge=60*60*24};
 
-    var res = zrv.Response.write("Set Cookie!");
+    var res = Response.write("Set Cookie!");
     // add cookie to the `cookies` field which is a slice of `Response.Cookie`
-    res.cookies = &[_]zrv.Response.Cookie{.{cookie}};
+    res.cookies = &[_]Response.Cookie{.{cookie}};
+    
+    return res;
 }
 ```
 
