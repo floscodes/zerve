@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    lib.install();
+    b.installArtifact(lib);
 
     const main_tests = b.addTest(.{
         .root_source_file = .{ .path = "src/zerve.zig" },
