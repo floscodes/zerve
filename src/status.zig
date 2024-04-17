@@ -148,6 +148,6 @@ pub const Status = enum(u32) {
     /// E.g. `Status.code(200)` will return `Status.OK`.
     /// The program will panic if the passed code does not exist.
     pub fn code(n: u32) Status {
-        return @intToEnum(Status, n);
+        return @enumFromInt(n);
     }
 };
