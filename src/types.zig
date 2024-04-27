@@ -129,7 +129,7 @@ pub const Request = struct {
         }
         if (query_string == null) return null;
         var pairs = std.mem.split(u8, query_string.?, "&");
-        const first_pair = pairs.first();
+        var first_pair = pairs.first();
         var items = std.mem.split(u8, first_pair, "=");
         var key = items.first();
         if (eql(u8, key_needle, key)) {
