@@ -1,6 +1,6 @@
 pkgs:
   zerve:
-    version: 0.0.22
+    version: 0.0.23
     license: MIT
     description: Simple web framework for zig
     source_url: "https://github.com/floscodes/zerve"
@@ -17,4 +17,3 @@ pkgs:
       framework
       http-server
       server-side
-      
