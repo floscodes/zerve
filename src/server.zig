@@ -18,12 +18,9 @@ pub const Server = struct {
     pub fn listen(ip: []const u8, port: u16, rt: []const Route, allocator: std.mem.Allocator) !void {
 
         // Init server
-        const server_options: std.net.StreamServer.Options = .{};
-        var server = std.net.StreamServer.init(server_options);
-        defer server.deinit();
         const addr = try std.net.Address.parseIp(ip, port);
-
-        try server.listen(addr);
+        var server = try addr.listen(.{});
+        defer server.deinit();
 
         // Handling connections
         while (true) {
