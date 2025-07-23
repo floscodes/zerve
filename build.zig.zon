@@ -1,7 +1,8 @@
 .{
-    .name = "zerve",
+    .name = .zerve,
     .version = "0.0.23",
-    .minimum_zig_version = "0.12.0",
+    .minimum_zig_version = "0.14.1",
+    .fingerprint = 0x6a70ffdbd30775ca,
     .paths = .{
         "build.zig",
         "build.zig.zon",

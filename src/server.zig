@@ -95,7 +95,7 @@ pub const Server = struct {
             // if there ist a path set in the uri trim the trailing slash in order to accept it later during the matching check.
             if (req.uri.len > 1) req.uri = std.mem.trimRight(u8, req.uri, "/");
             // Declare new URI variable and cut off a possible request string in order to accept it in a GET Request
-            var uri_parts = std.mem.split(u8, req.uri, "?");
+            var uri_parts = std.mem.splitSequence(u8, req.uri, "?");
             const uri_string = uri_parts.first();
 
             // BUILDING THE RESPONSE
@@ -128,11 +128,11 @@ pub const Server = struct {
 
 // Function that build the Request headers and cookies from stream
 fn buildRequestHeadersAndCookies(req: *Request, bytes: []const u8, allocator: std.mem.Allocator) !void {
-    var header_lines = std.mem.split(u8, bytes, "\r\n");
+    var header_lines = std.mem.splitSequence(u8, bytes, "\r\n");
     var header_buffer = std.ArrayList(Header).init(allocator);
     var cookie_buffer = std.ArrayList(Request.Cookie).init(allocator);
 
-    var header_items = std.mem.split(u8, header_lines.first(), " ");
+    var header_items = std.mem.splitSequence(u8, header_lines.first(), " ");
     req.method = Method.parse(header_items.first());
     req.uri = if (header_items.next()) |value| value else "";
 
@@ -143,7 +143,7 @@ fn buildRequestHeadersAndCookies(req: *Request, bytes: []const u8, allocator: st
     }
 
     while (header_lines.next()) |line| {
-        var headers = std.mem.split(u8, line, ":");
+        var headers = std.mem.splitSequence(u8, line, ":");
         const item1 = headers.first();
         // Check if header is a cookie and parse it
         if (eql(u8, item1, "Cookie") or eql(u8, item1, "cookie")) {
@@ -166,7 +166,7 @@ fn buildRequestHeadersAndCookies(req: *Request, bytes: []const u8, allocator: st
 test "build a Request" {
     const allocator = std.testing.allocator;
     const stream = "GET /test HTTP/1.1\r\nHost: localhost\r\nUser-Agent: Testbot\r\nCookie: Test-Cookie=Test\r\n\r\nThis is the test body!";
-    var parts = std.mem.split(u8, stream, "\r\n\r\n");
+    var parts = std.mem.splitSequence(u8, stream, "\r\n\r\n");
     const client_ip = "127.0.0.1";
     const headers = parts.first();
     const body = parts.next().?;
