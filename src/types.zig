@@ -120,7 +120,7 @@ pub const Request = struct {
     pub fn getQuery(self: *Request, key_needle: []const u8) ?[]const u8 {
         var query_string: ?[]const u8 = null;
         if (self.method == .GET) {
-            var parts = std.mem.split(u8, self.uri, "?");
+            var parts = std.mem.splitSequence(u8, self.uri, "?");
             _ = parts.first();
             query_string = parts.next();
         }
@@ -128,15 +128,15 @@ pub const Request = struct {
             query_string = self.body;
         }
         if (query_string == null) return null;
-        var pairs = std.mem.split(u8, query_string.?, "&");
+        var pairs = std.mem.splitScalar(u8, query_string.?, "&");
         const first_pair = pairs.first();
-        var items = std.mem.split(u8, first_pair, "=");
+        var items = std.mem.splitSequence(u8, first_pair, "=");
         var key = items.first();
         if (eql(u8, key_needle, key)) {
             if (items.next()) |value| return value;
         }
         while (pairs.next()) |pair| {
-            items = std.mem.split(u8, pair, "=");
+            items = std.mem.splitSequence(u8, pair, "=");
             key = items.first();
             if (eql(u8, key_needle, key)) {
                 if (items.next()) |value| return value;

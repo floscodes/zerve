@@ -1,6 +1,6 @@
 const std = @import("std");
 const trim = std.mem.trim;
-const split = std.mem.split;
+const split = std.mem.splitSequence;
 const olderVersion: bool = @import("builtin").zig_version.minor < 11;
 
 pub const Cookie = struct {
