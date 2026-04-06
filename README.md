@@ -1,6 +1,6 @@
 # zerve
 
-A simple framework for writing web services in zig.
+*zerve* is a lightweight, zero-dependency web framework for Zig – designed to be simple, fast, and easy to use..
 
 * [Create a simple Web App](#create-a-simple-web-app)
 * [Types](#types)
